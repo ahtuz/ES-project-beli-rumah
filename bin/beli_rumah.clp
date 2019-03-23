@@ -41,8 +41,56 @@
     (printout t "1. House with Garage" crlf)
     (printout t "2. House without Garage" crlf)
     
-    (printout t "Choose[1/2 | 0 to back to main menu]: ")
+    ;inisialisasi viewHouse choice
+    (bind ?choice -1)
     
+    (while (neq ?choice 0)
+        ;inisialisasi flag validasi viewHouse choice
+	    (bind ?flagChoice FALSE)
+	    
+	    (while(eq ?flagChoice FALSE)
+	        
+	        (printout t "Choose [ 1/2 | 0 to back to main menu ]: ")
+        	(bind ?choice (read))
+	        
+	        ;validasi choice tipe adalah angka
+	        (if(eq (numberp ?choice) TRUE) then
+	            
+	            ;validasi choice harus 1...2
+	        	(if(or (< ?choice 0) (> ?choice 2)) then
+	            	(bind ?flagChoice FALSE)
+	        	else
+	        		(bind ?flagChoice TRUE)
+	        	)
+	            
+	        else
+	        	(bind ?flagChoice FALSE)
+	    	)
+	    )
+        
+        (if (eq ?choice 1) then
+            	(printout t "House With Garage")
+            
+            	
+            	(printout t "============================================" crlf)
+            
+            	;agar bisa keluar dari looping awal
+            	(bind ?choice 0)
+            	(printout t "Press Enter to Continue...")
+            	(readline)
+            
+	        elif (eq ?choice 2) then
+	        	(printout t "House Without Garage")
+	            
+	        
+            	(printout t "============================================" crlf)
+            
+	        	;agar bisa keluar dari looping awal
+	            (bind ?choice 0)
+                (printout t "Press Enter to Continue...")
+            	(readline)
+        )
+    )
 )
 
 (reset)
