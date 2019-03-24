@@ -94,6 +94,155 @@
     )
 )
 
+(deffunction addHouseWithGarage()
+    
+    ;insert house type
+    (bind ?type "")
+    
+    (while (and (neq ?type "Cottage")
+            (neq ?type "Light House")
+            (neq ?type "Skyscraper"))
+		(printout t "Input house type [Cottage | Light House | Skyscraper] (CASE-SENSITIVE): ")
+        (bind ?type (readline))
+    )
+    
+    ;insert room number
+    (bind ?room 0)
+    
+    (while (or (< ?room 1)
+            (> ?room 5))
+        (printout t "Input room number [1 - 5]: ")
+        (bind ?room (read))
+    )
+    
+    ;insert house price
+    (bind ?price 0)
+    
+    ;inisialisasi flag validasi house price
+	(bind ?flagChoice FALSE)
+
+    (while(eq ?flagChoice FALSE)
+        
+        (printout t "Input house price [1000 - 5000000] (dollars): ")
+		(bind ?price (read))
+        
+        ;validasi price tipe adalah angka
+        (if(eq (numberp ?price) TRUE) then
+            
+            ;validasi price harus 1000...5000000 dollars
+        	(if(or (< ?price 1000) (> ?price 5000000)) then
+            	(bind ?flagChoice FALSE)
+        	else
+        		(bind ?flagChoice TRUE)
+        	)
+            
+        else
+        	(bind ?flagChoice FALSE)
+    	)
+    )
+    
+    ;insert house location
+    (bind ?type "")
+    
+    (while (and (neq ?type "West Jakarta")
+            (neq ?type "North Jakarta")
+            (neq ?type "South Jakarta"))
+		(printout t "Input house type [West Jakarta | North Jakarta | South Jakarta] (CASE-SENSITIVE): ")
+        (bind ?type (readline))
+    )
+    
+    
+    ;insert house garage
+    (bind ?garage 0)
+    
+    ;inisialisasi flag validasi house garage
+	(bind ?flagChoice FALSE)
+
+    (while(eq ?flagChoice FALSE)
+        
+        (printout t "Input garage number [1 - 5]: ")
+		(bind ?garage (read))
+        
+        ;validasi garage tipe adalah angka
+        (if(eq (numberp ?garage) TRUE) then
+            
+            ;validasi garage harus 1...5
+        	(if(or (< ?garage 1) (> ?garage 5)) then
+            	(bind ?flagChoice FALSE)
+        	else
+        		(bind ?flagChoice TRUE)
+        	)
+            
+        else
+        	(bind ?flagChoice FALSE)
+    	)
+    )
+    
+    (assert(houseWithGarage(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
+    
+)
+
+(deffunction addHouseNoGarage()
+    
+    ;insert house type
+    (bind ?type "")
+    
+    (while (and (neq ?type "Cottage")
+            (neq ?type "Light House")
+            (neq ?type "Skyscraper"))
+		(printout t "Input house type [Cottage | Light House | Skyscraper] (CASE-SENSITIVE): ")
+        (bind ?type (readline))
+    )
+    
+    ;insert room number
+    (bind ?room 0)
+    
+    (while (or (< ?room 1)
+            (> ?room 5))
+        (printout t "Input room number [1 - 5]: ")
+        (bind ?room (read))
+    )
+    
+    ;insert house price
+    (bind ?price 0)
+    
+    ;inisialisasi flag validasi house price
+	(bind ?flagChoice FALSE)
+
+    (while(eq ?flagChoice FALSE)
+        
+        (printout t "Input house price [1000 - 5000000] (dollars): ")
+		(bind ?price (read))
+        
+        ;validasi price tipe adalah angka
+        (if(eq (numberp ?price) TRUE) then
+            
+            ;validasi price harus 1000...5000000 dollars
+        	(if(or (< ?price 1000) (> ?price 5000000)) then
+            	(bind ?flagChoice FALSE)
+        	else
+        		(bind ?flagChoice TRUE)
+        	)
+            
+        else
+        	(bind ?flagChoice FALSE)
+    	)
+    )
+    
+    ;insert house location
+    (bind ?type "")
+    
+    (while (and (neq ?type "West Jakarta")
+            (neq ?type "North Jakarta")
+            (neq ?type "South Jakarta"))
+		(printout t "Input house type [West Jakarta | North Jakarta | South Jakarta] (CASE-SENSITIVE): ")
+        (bind ?type (readline))
+    )
+    
+    (assert(houseNoGarage(type ?type)(room ?room)(price ?price)(location ?location)))
+    
+)
+
 (deffunction addHouse() ;not finish
 	(printout t "Type of house to be addded" crlf)
     (printout t "============================================" crlf)
@@ -128,93 +277,10 @@
 	    )
         
         (if (eq ?choice 1) then
-            
-            ;insert house type
-            (bind ?type "")
-            
-            (while (and (neq ?type "Cottage")
-                    (neq ?type "Light House")
-                    (neq ?type "Skyscraper"))
-	    		(printout t "Input house type [Cottage | Light House | Skyscraper] (CASE-SENSITIVE): ")
-                (bind ?type (readline))
-            )
-            
-            ;insert room number
-            (bind ?room 0)
-            
-            (while (or (< ?room 1)
-                    (> ?room 5))
-                (printout t "Input room number [1 - 5]: ")
-                (bind ?room (read))
-            )
-            
-            ;insert house price
-            (bind ?price 0)
-            
-            ;inisialisasi flag validasi house price
-    		(bind ?flagChoice FALSE)
-    
-		    (while(eq ?flagChoice FALSE)
-		        
-		        (printout t "Input house price [1000 - 5000000] (dollars): ")
-				(bind ?price (read))
-		        
-		        ;validasi price tipe adalah angka
-		        (if(eq (numberp ?price) TRUE) then
-		            
-		            ;validasi price harus 1000...5000000 dollars
-		        	(if(or (< ?price 1000) (> ?price 5000000)) then
-		            	(bind ?flagChoice FALSE)
-		        	else
-		        		(bind ?flagChoice TRUE)
-		        	)
-		            
-		        else
-		        	(bind ?flagChoice FALSE)
-		    	)
-		    )
-            
-            ;insert house location
-            (bind ?type "")
-            
-            (while (and (neq ?type "West Jakarta")
-                    (neq ?type "North Jakarta")
-                    (neq ?type "South Jakarta"))
-	    		(printout t "Input house type [West Jakarta | North Jakarta | South Jakarta] (CASE-SENSITIVE): ")
-                (bind ?type (readline))
-            )
-            
-            
-            ;insert house garage
-            (bind ?garage 0)
-            
-            ;inisialisasi flag validasi house garage
-    		(bind ?flagChoice FALSE)
-    
-		    (while(eq ?flagChoice FALSE)
-		        
-		        (printout t "Input garage number [1 - 5]: ")
-				(bind ?garage (read))
-		        
-		        ;validasi garage tipe adalah angka
-		        (if(eq (numberp ?garage) TRUE) then
-		            
-		            ;validasi garage harus 1...5
-		        	(if(or (< ?garage 1) (> ?garage 5)) then
-		            	(bind ?flagChoice FALSE)
-		        	else
-		        		(bind ?flagChoice TRUE)
-		        	)
-		            
-		        else
-		        	(bind ?flagChoice FALSE)
-		    	)
-		    )
-            
-            
-            
+            (addHouseWithGarage)
+         elif (eq ?choice 2) then
+            (addHouseNoGarage)
         )
-        
     )   
 )
 
