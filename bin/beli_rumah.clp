@@ -94,7 +94,7 @@
             	(printout t "House With Garage" crlf)
             	(printout t "============================================" crlf)
             	(printout t "| No. | Type				| Room		| Price				| Location			| Garage	|" crlf)
-            	;(printout t "|" ?no "|" ?type "				| " Room		| Price				| Location			| Garage	|" crlf)
+            	(run)
             	(printout t "============================================" crlf)
             
             	;agar bisa keluar dari looping awal
@@ -104,8 +104,9 @@
             
 	        elif (eq ?choice 2) then
 	        	(printout t "House Without Garage")
-	            
-	        
+	            (printout t "============================================" crlf)
+            	(printout t "| No. | Type				| Room		| Price				| Location			|" crlf)
+            	(run)
             	(printout t "============================================" crlf)
             
 	        	;agar bisa keluar dari looping awal
@@ -164,13 +165,13 @@
     )
     
     ;insert house location
-    (bind ?type "")
+    (bind ?location "")
     
-    (while (and (neq ?type "West Jakarta")
-            (neq ?type "North Jakarta")
-            (neq ?type "South Jakarta"))
+    (while (and (neq ?location "West Jakarta")
+            (neq ?location "North Jakarta")
+            (neq ?location "South Jakarta"))
 		(printout t "Input house type [West Jakarta | North Jakarta | South Jakarta] (CASE-SENSITIVE): ")
-        (bind ?type (readline))
+        (bind ?location (readline))
     )
     
     
@@ -198,7 +199,7 @@
         else
         	(bind ?flagChoice FALSE)
     	)
-    )
+    )  
     
     (assert(houseWithGarage(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
     
@@ -252,13 +253,13 @@
     )
     
     ;insert house location
-    (bind ?type "")
+    (bind ?location "")
     
-    (while (and (neq ?type "West Jakarta")
-            (neq ?type "North Jakarta")
-            (neq ?type "South Jakarta"))
+    (while (and (neq ?location "West Jakarta")
+            (neq ?location "North Jakarta")
+            (neq ?location "South Jakarta"))
 		(printout t "Input house type [West Jakarta | North Jakarta | South Jakarta] (CASE-SENSITIVE): ")
-        (bind ?type (readline))
+        (bind ?location (readline))
     )
     
     (assert(houseNoGarage(type ?type)(room ?room)(price ?price)(location ?location)))
@@ -300,8 +301,10 @@
         
         (if (eq ?choice 1) then
             (addHouseWithGarage)
+            (bind ?choice 0)
          elif (eq ?choice 2) then
             (addHouseNoGarage)
+            (bind ?choice 0)
         )
     )   
 )
