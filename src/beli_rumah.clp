@@ -21,20 +21,29 @@
     (slot room)
     (slot price)
     (slot location)
+    (slot garage)
 )
 
 (defrule viewHouseWithGarage
-    (houseWithGarage (type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage))
+    (view 1)
+    (houseWithGarage (type ?type)(room ?room)(price ?price)(location ?loc)(garage ?garage))
     =>
-	(bind ?*withGarageCount* (+ ?*withGarageCount* 1))
-    (printout t ?*withGarageCount* ". " ?type " |" ?room " |" ?price " |" ?location " |" ?garage " " crlf)
+    (bind ?*withGarageCount* (++ ?*withGarageCount*))
+    (printout t ?*withGarageCount* ". | " ?type " | " ?room " | " ?price " | " ?loc " | " ?garage " |" crlf)
 )
 
 (defrule viewHouseNoGarage
-    (houseNoGarage (type ?type)(room ?room)(price ?price)(location ?location))
+    (view 0)
+    (houseNoGarage (type ?type)(room ?room)(price ?price)(location ?loc)(garage ?garage))
     =>
-	(bind ?*noGarageCount* (+ ?*noGarageCount* 1))
-    (printout t ?*noGarageCount* ". " ?type " |" ?room " |" ?price " |" ?location crlf)
+    (bind ?*noGarageCount* (++ ?*noGarageCount*))
+    (printout t ?*noGarageCount* ". | " ?type " | " ?room " | " ?price " | " ?loc " |" crlf)
+)
+
+(defrule retractView
+    ?view <- (view ?garage)
+    =>
+    (retract ?view)
 )
 
 (deffunction menu()
@@ -57,7 +66,7 @@
     )
 )
 
-(deffunction viewHouse() ;not finish
+(deffunction viewHouse()
     (printout t "List of house to be viewed" crlf)
     (printout t "============================================" crlf)
     (printout t "1. House with Garage" crlf)
@@ -92,23 +101,22 @@
         
         (if (eq ?choice 1) then
             	(printout t "House With Garage" crlf)
-            	(printout t "============================================" crlf)
-            	(printout t "| No. | Type				| Room		| Price				| Location			| Garage	|" crlf)
+            	"view 1 berarti run defrule viewHouseWithGarage"
+            	(bind ?*withGarageCount* 0)
+                (assert (view 1))
             	(run)
             	(printout t "============================================" crlf)
-            
-            	;agar bisa keluar dari looping awal
             	(bind ?choice 0)
             	(printout t "Press Enter to Continue...")
             	(readline)
             
 	        elif (eq ?choice 2) then
-	        	(printout t "House Without Garage")
-	            (printout t "============================================" crlf)
-            	(printout t "| No. | Type				| Room		| Price				| Location			|" crlf)
-            	(run)
+	        	(printout t "House Without Garage" crlf)
+            	"view 0 berarti run defrule viewHouseNoGarage"
+            	(bind ?*noGarageCount* 0)
+	            (assert (view 0))
+                (run)
             	(printout t "============================================" crlf)
-            
 	        	;agar bisa keluar dari looping awal
 	            (bind ?choice 0)
                 (printout t "Press Enter to Continue...")
@@ -310,66 +318,71 @@
 )
 
 (deffunction updateHouseWithGarage(); Not perfect
-    (viewHouse)
+    (bind ?*withGarageCount* 0)
+    (assert (view 1))
     (run)
         
-    (bind ?idxFlag FALSE)
+    (bind ?flagChoice FALSE)
     (bind ?idx -1)
+    
+    (while(eq ?flagChoice FALSE)
 
-    (while(eq ?idxFlag FALSE)
-
-        (printout t "Which house to be updated [ 1.. "?*withGarageCount" | 0 to back to main menu ]: ") 
+        (printout t "Which house to be updated [ 1.." ?*withGarageCount* " | 0 to back to main menu ]: ") 
         (bind ?idx (read))
                 
         (if(eq (numberp ?idx) TRUE) then
                     
-            (if (and (< ?idx 0) (> ?idx ?*withGarageCount* )) then 
+            (if (or (< ?idx 0) (> ?idx ?*withGarageCount* )) then 
                 (bind ?flagChoice FALSE)
+            elif (eq ?idx 0) then
+                (bind ?flagChoice TRUE)
             else
                 (bind ?flagChoice TRUE)
+                
+                "updateWithGarage"
+                
+                (bind ?utype "")
+			    (while (and (neq ?utype "Cottage") (neq ?utype "Light House") (neq ?utype "Skyscraper"))
+			        (printout t "Input New House Type [Cottage | Light House | Skyscraper] (Case Sensitive): ")
+			        (bind ?utype (readline))
+			    )
+			
+			    (bind ?uroom 0)
+			    (while ( or (eq (numberp ?uroom) FALSE) (or (< ?uroom 1) (> ?uroom 5) ) )
+			        (printout t "Input Room Number [1..5]: ")
+			        (bind ?uroom (read))
+			    )
+			
+			    (bind ?uprice 0)
+			    (while ( or (eq (numberp ?uprice) FALSE) (or (< ?uprice 1000) (> ?uprice 500000) ) )
+			        (printout t "Input New House Price [1000..500000]: ")
+			        (bind ?uprice (read))
+			    )
+			
+			    (bind ?uloc "")
+			    (while (and (neq ?uloc "West Jakarta") (neq ?uloc "North Jakarta") (neq ?uloc "South Jakarta"))
+			        (printout t "Input Location [West Jakarta | North Jakarta | South Jakarta] (Case Sensitive): ")
+			        (bind ?uloc (readline))
+			    )
+			
+			    (bind ?ugarage 0)
+			    (while ( or (eq (numberp ?ugarage) FALSE) (or (< ?ugarage 1) (> ?ugarage 5) ) )
+			        (printout t "Input Garage Number [1..5]: ")
+			        (bind ?ugarage (read))
+			    )
+			
+			    (modify ?idx (type ?utype)(room ?uroom)(price ?uprice)(location ?uloc)(garage ?ugarage))
             )
                     
-        else
+       	else
             (bind ?flagChoice FALSE)
-
-        )    
+        )
     )
-
-    (bind ?utype "")
-    (while (and (neq ?utype "Cottage") (neq ?utype "Light House") (neq ?utype "Skyscraper"))
-        (printout t "Input New House Type [Cottage | Light House | Skyscraper] (Case Sensitive): ")
-        (bind ?utype (readline))
-    )
-
-    (bind ?uroom 0)
-    (while ( or (eq (numberp ?uroom) FALSE) (or (< ?uroom 1) (> ?uroom 5) ) )
-        (printout t "Input Room Number [1..5]: ")
-        (bind ?uroom (read))
-    )
-
-    (bind ?uprice 0)
-    (while ( or (eq (numberp ?uprice) FALSE) (or (< ?uprice 1000) (> ?uprice 500000) ) )
-        (printout t "Input New House Price [1000..500000]: ")
-        (bind ?uprice (read))
-    )
-
-    (bind ?uloc "")
-    (while (and (neq ?uloc "West Jakarta") (neq ?uloc "North Jakarta") (neq ?uloc "South Jakarta"))
-        (printout t "Input Location [West Jakarta | North Jakarta | South Jakarta] (Case Sensitive): ")
-        (bind ?uloc (readline))
-    )
-
-    (bind ?ugarage 0)
-    (while ( or (eq (numberp ?ugarage) FALSE) (or (< ?ugarage 1) (> ?ugarage 5) ) )
-        (printout t "Input Garage Number [1..5]: ")
-        (bind ?ugarage (read))
-    )
-
-    (modify ?idx (type ?utype)(room ?uroom)(price ?uprice)(location ?uloc)(garage ?ugarage))
 )
 
 (deffunction updateHouseNoGarage(); Also Not perfect
-    (viewHouse)
+    (bind ?*noGarageCount* 1)
+	(assert (view 0))
     (run)
         
     (bind ?idxFlag FALSE)
@@ -377,49 +390,48 @@
 
     (while(eq ?idxFlag FALSE)
 
-        (printout t "Which house to be updated [ 1.. "?*noGarageCount" | 0 to back to main menu ]: ") 
+        (printout t "Which house to be updated [ 1.." ?*noGarageCount " | 0 to back to main menu ]: ") 
         (bind ?idx (read))
                 
         (if(eq (numberp ?idx) TRUE) then
                     
             (if (and (< ?idx 0) (> ?idx ?*noGarageCount* )) then 
                 (bind ?flagChoice FALSE)
+            elif (eq ?idx 0) then
+                (bind ?flagChoice TRUE)
             else
                 (bind ?flagChoice TRUE)
+                (bind ?utype "")
+			    (while (and (neq ?utype "Cottage") (neq ?utype "Light House") (neq ?utype "Skyscraper"))
+			        (printout t "Input New House Type [Cottage | Light House | Skyscraper] (Case Sensitive): ")
+			        (bind ?utype (readline))
+			    )
+			
+			    (bind ?uroom 0)
+			    (while ( or (eq (numberp ?uroom) FALSE) (or (< ?uroom 1) (> ?uroom 5) ) )
+			        (printout t "Input Room Number [1..5]: ")
+			        (bind ?uroom (read))
+			    )
+			
+			    (bind ?uprice 0)
+			    (while ( or (eq (numberp ?uprice) FALSE) (or (< ?uprice 1000) (> ?uprice 500000) ) )
+			        (printout t "Input New House Price [1000..500000]: ")
+			        (bind ?uprice (read))
+			    )
+			
+			    (bind ?uloc "")
+			    (while (and (neq ?uloc "West Jakarta") (neq ?uloc "North Jakarta") (neq ?uloc "South Jakarta"))
+			        (printout t "Input Location [West Jakarta | North Jakarta | South Jakarta] (Case Sensitive): ")
+			        (bind ?uloc (readline))
+			    )
+			
+			    (modify ?idx (type ?utype)(room ?uroom)(price ?uprice)(location ?uloc))
             )
                     
         else
             (bind ?flagChoice FALSE)
-
         )    
     )
-
-    (bind ?utype "")
-    (while (and (neq ?utype "Cottage") (neq ?utype "Light House") (neq ?utype "Skyscraper"))
-        (printout t "Input New House Type [Cottage | Light House | Skyscraper] (Case Sensitive): ")
-        (bind ?utype (readline))
-    )
-
-    (bind ?uroom 0)
-    (while ( or (eq (numberp ?uroom) FALSE) (or (< ?uroom 1) (> ?uroom 5) ) )
-        (printout t "Input Room Number [1..5]: ")
-        (bind ?uroom (read))
-    )
-
-    (bind ?uprice 0)
-    (while ( or (eq (numberp ?uprice) FALSE) (or (< ?uprice 1000) (> ?uprice 500000) ) )
-        (printout t "Input New House Price [1000..500000]: ")
-        (bind ?uprice (read))
-    )
-
-    (bind ?uloc "")
-    (while (and (neq ?uloc "West Jakarta") (neq ?uloc "North Jakarta") (neq ?uloc "South Jakarta"))
-        (printout t "Input Location [West Jakarta | North Jakarta | South Jakarta] (Case Sensitive): ")
-        (bind ?uloc (readline))
-    )
-
-    (modify ?idx (type ?utype)(room ?uroom)(price ?uprice)(location ?uloc))
-    
 )
 
 (deffunction deleteHouseWithGarage() ; definitely needs fixing
@@ -513,6 +525,7 @@
 	    )
 
         (bind ?idx -1)
+        
         (if (eq ?choice 1) then
             (updateHouseWithGarage)
 
@@ -576,6 +589,20 @@
         (printout t "Press Enter to Continue...")
         (readline)
     )
+)
+
+(deffacts house
+	(houseNoGarage (type "Cottage") (room 3) (price 7500) (location "South Jakarta")) 
+	(houseNoGarage (type "Light House") (room 3) (price 25000) (location "South Jakarta")) 
+	(houseNoGarage (type "Skyscraper") (room 4) (price 100000) (location "West Jakarta")) 
+	(houseNoGarage (type "Cottage") (room 2) (price 5000) (location "North Jakarta")) 
+	(houseNoGarage (type "Light House") (room 3) (price 10000) (location "West Jakarta"))  
+    
+	(houseWithGarage (type "Cottage") (room 3) (price 30000) (location "West Jakarta") (garage 2)) 
+	(houseWithGarage (type "Light House") (room 2) (price 7500) (location "South Jakarta") (garage 2)) 
+	(houseWithGarage (type "Cottage") (room 3) (price 4500) (location "North Jakarta") (garage 1)) 
+	(houseWithGarage (type "Skyscraper") (room 5) (price 175000) (location "South Jakarta") (garage 3)) 
+	(houseWithGarage (type "Light House") (room 4) (price 7500) (location "West Jakarta") (garage 1))    
 )
 
 (reset)
