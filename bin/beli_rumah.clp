@@ -435,7 +435,7 @@
     )
 )
 
-(deffunction updateHouseNoGarage(); Also Not perfect
+(deffunction updateHouseNoGarage()
     (bind ?*noGarageCount* 0)
 	(assert (view 0))
     (run)
@@ -527,7 +527,7 @@
     )
 )
 
-(deffunction deleteHouseNoGarage() ; definitely needs fixing
+(deffunction deleteHouseNoGarage()
     (bind ?*noGarageCount* 0)
 	(assert (view 0))
     (run)
@@ -654,6 +654,109 @@
     )
 )
 
+(deffunction searchHouse()
+    "not yet finished"
+    (bind ?sName "")
+    (bind ?sGender "")
+    (bind ?sPreferences "")
+    (bind ?sIncome -1)
+    (bind ?sLocation "")
+    (bind ?sType "")
+    (bind ?sCar -1)
+    
+    "name"
+    (bind ?flagChoice FALSE)
+
+    (while(eq ?flagChoice FALSE)
+        (bind ?sName (readline)
+	    (if(or (< ?sName 3) (> ?sName 20)) then
+	       (bind ?flagChoice FALSE)
+	    else
+	       (bind ?sName TRUE)
+	    )
+    ))
+    
+    "gender"
+    (while (and (neq ?sGender "Male")
+            (neq ?sGender "Female"))
+		(printout t "Input your gender [Male | Female] (CASE-SENSITIVE): ")
+        (bind ?sGender (readline))
+    )
+    
+    "search preferences"
+    (while (and (neq ?sPreferences "With Garage")
+            (neq ?sPreferences "Without Garage"))
+		(printout t "Input house preferences [With Garage | Without Garage] (CASE-SENSITIVE): ")
+        (bind ?sPreferences (readline))
+    )
+    
+    "user income"
+    ;inisialisasi flag validasi house price
+	(bind ?flagChoice FALSE)
+
+    (while(eq ?flagChoice FALSE)
+        
+        (printout t "Input your income [10000 - 500000] (dollars): ")
+		(bind ?sIncome (read))
+        
+        ;validasi income tipe adalah angka
+        (if(eq (numberp ?sIncome) TRUE) then
+            
+            ;validasi income harus 10000...500000 dollars
+        	(if(or (< ?sIncome 10000) (> ?price 500000)) then
+            	(bind ?flagChoice FALSE)
+        	else
+        		(bind ?flagChoice TRUE)
+        	)
+            
+        else
+        	(bind ?flagChoice FALSE)
+    	)
+    )
+    
+    "search house location"
+    (bind ?sLocation "")
+    
+    (while (and (neq ?sLocation "West Jakarta")
+            (neq ?sLocation "North Jakarta")
+            (neq ?sLocation "South Jakarta"))
+		(printout t "Input your work location [West Jakarta | North Jakarta | South Jakarta] (CASE-SENSITIVE): ")
+        (bind ?sLocation (readline))
+    )
+    
+    "search house type"
+    (while (and (neq ?sType "Cottage")
+            (neq ?sType "Light House")
+            (neq ?sType "Skyscraper"))
+		(printout t "Input your preffered house type [Cottage | Light House | Skyscraper] (CASE-SENSITIVE): ")
+        (bind ?sType (readline))
+    )
+    
+    ;insert house garage
+    ;inisialisasi flag validasi house garage
+	(bind ?flagChoice FALSE)
+
+    (while(eq ?flagChoice FALSE)
+        
+        (printout t "Input garage number [1 - 5]: ")
+		(bind ?garage (read))
+        
+        ;validasi garage tipe adalah angka
+        (if(eq (numberp ?garage) TRUE) then
+            
+            ;validasi garage harus 1...5
+        	(if(or (< ?garage 1) (> ?garage 5)) then
+            	(bind ?flagChoice FALSE)
+        	else
+        		(bind ?flagChoice TRUE)
+        	)
+            
+        else
+        	(bind ?flagChoice FALSE)
+    	)
+    )  
+)
+
 (deffacts house
     "intentionally shuffled"
 	(houseNoGarage (id 1)(type "Cottage") (room 3) (price 7500) (location "South Jakarta"))
@@ -713,7 +816,7 @@
         	(deleteHouse)
         
         elif (eq ?choice 5) then
-        	;(searchHouse)
+        	(searchHouse)
     )
     
     (clearScreen)
