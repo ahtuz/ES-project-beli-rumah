@@ -1,13 +1,19 @@
 (defglobal 
     ?*withGarageCount* = 0
     ?*noGarageCount* = 0
+    ?*withGarageID* = 5
+    ?*noGarageID* = 5
 )
+
+"withGarageCount & noGarageCount is for the view house rule"
+"ID starts from 5 because there are 5 initial facts"
 
 ;not yet make global idx for add
 ;not yet make idx for differentiate with garage & no garage
 
 (deftemplate houseWithGarage
     ;template house with garage
+    (slot id)
     (slot type)
     (slot room)
     (slot price)
@@ -17,11 +23,11 @@
 
 (deftemplate houseNoGarage
     ;template house without garage
+    (slot id)
     (slot type)
     (slot room)
     (slot price)
     (slot location)
-    (slot garage)
 )
 
 (defrule viewHouseWithGarage
@@ -34,16 +40,33 @@
 
 (defrule viewHouseNoGarage
     (view 0)
-    (houseNoGarage (type ?type)(room ?room)(price ?price)(location ?loc)(garage ?garage))
+    (houseNoGarage (type ?type)(room ?room)(price ?price)(location ?loc))
     =>
     (bind ?*noGarageCount* (++ ?*noGarageCount*))
     (printout t ?*noGarageCount* ". | " ?type " | " ?room " | " ?price " | " ?loc " |" crlf)
 )
 
 (defrule retractView
-    ?view <- (view ?garage)
+    "untuk delete fact VIEW"
+    ?view <- (view ?i)
     =>
     (retract ?view)
+)
+
+(defrule updateWithGarage
+	?modify <- (modify ?ugarage ?idx)
+    ?data-fact <- (houseWithGarage (id ?idx))
+    =>
+    (modify ?data-fact (id ?idx)(type ?utype)(room ?uroom)(price ?uprice)(location ?uloc)(garage ?ugarage))
+    (retract ?modify)
+)
+
+(defrule updateNoGarage
+	?modify <- (modify ?idx)
+    ?data-fact <- (houseNoGarage (id ?idx))
+    =>
+    (modify ?data-fact (id ?idx)(type ?utype)(room ?uroom)(price ?uprice)(location ?uloc))
+    (retract ?modify)
 )
 
 (deffunction menu()
@@ -209,7 +232,8 @@
     	)
     )  
     
-    (assert(houseWithGarage(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
+    (bind ?id (++ ?*withGarageID*))
+    (assert(houseWithGarage (id ?id)(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
     
 )
 
@@ -270,11 +294,12 @@
         (bind ?location (readline))
     )
     
-    (assert(houseNoGarage(type ?type)(room ?room)(price ?price)(location ?location)))
+    (bind ?id (++ ?*noGarageID*))
+    (assert(houseNoGarage (id ?id)(type ?type)(room ?room)(price ?price)(location ?location)))
     
 )
 
-(deffunction addHouse() ;not finish
+(deffunction addHouse()
 	(printout t "Type of house to be addded" crlf)
     (printout t "============================================" crlf)
     (printout t "1. House with Garage" crlf)
@@ -317,7 +342,7 @@
     )   
 )
 
-(deffunction updateHouseWithGarage(); Not perfect
+(deffunction updateHouseWithGarage()
     (bind ?*withGarageCount* 0)
     (assert (view 1))
     (run)
@@ -370,8 +395,12 @@
 			        (printout t "Input Garage Number [1..5]: ")
 			        (bind ?ugarage (read))
 			    )
-			
-			    (modify ?idx (type ?utype)(room ?uroom)(price ?uprice)(location ?uloc)(garage ?ugarage))
+                
+                (bind ?*withGarageID* (+ ?*withGarageID* 1))
+                (bind ?idx (- ?*withGarageID* ?idx))
+			    (assert (modify ?ugarage ?idx))
+                (run)
+                (bind ?*withGarageID* (- ?*withGarageID* 1))
             )
                     
        	else
@@ -381,16 +410,16 @@
 )
 
 (deffunction updateHouseNoGarage(); Also Not perfect
-    (bind ?*noGarageCount* 1)
+    (bind ?*noGarageCount* 0)
 	(assert (view 0))
     (run)
         
-    (bind ?idxFlag FALSE)
+    (bind ?flagChoice FALSE)
     (bind ?idx -1)
 
-    (while(eq ?idxFlag FALSE)
+    (while(eq ?flagChoice FALSE)
 
-        (printout t "Which house to be updated [ 1.." ?*noGarageCount " | 0 to back to main menu ]: ") 
+        (printout t "Which house to be updated [ 1.." ?*noGarageCount* " | 0 to back to main menu ]: ") 
         (bind ?idx (read))
                 
         (if(eq (numberp ?idx) TRUE) then
@@ -425,7 +454,11 @@
 			        (bind ?uloc (readline))
 			    )
 			
-			    (modify ?idx (type ?utype)(room ?uroom)(price ?uprice)(location ?uloc))
+			    (bind ?*noGarageID* (+ ?*noGarageID* 1))
+                (bind ?idx (- ?*noGarageID* ?idx))
+			    (assert (modify ?idx))
+                (run)
+                (bind ?*noGarageID* (- ?*noGarageID* 1))
             )
                     
         else
@@ -434,8 +467,9 @@
     )
 )
 
-(deffunction deleteHouseWithGarage() ; definitely needs fixing
-    (viewHouse)
+(deffunction deleteHouseWithGarage()
+    (bind ?*withGarageCount* 0)
+	(assert (view 1))
     (run)
         
     (bind ?idxFlag FALSE)
@@ -465,7 +499,8 @@
 )
 
 (deffunction deleteHouseNoGarage() ; definitely needs fixing
-    (viewHouse)
+    (bind ?*noGarageCount* 0)
+	(assert (view 0))
     (run)
         
     (bind ?idxFlag FALSE)
@@ -494,7 +529,7 @@
 
 )
 
-(deffunction updateHouse() ; Please Check Again
+(deffunction updateHouse()
     (printout t "Type of house to be updated" crlf)
     (printout t "=========================" crlf)
     (printout t "1. House with garage" crlf)
@@ -531,8 +566,6 @@
 
         elif (eq ?choice 2) then 
             (updateHouseNoGarage)
-
-
         )
 
         (printout t "============================================" crlf)
@@ -543,7 +576,7 @@
     )
 )
 
-(deffunction deleteHouse() ; Please Check Again
+(deffunction deleteHouse()
     (printout t "Type of house to be deleted" crlf)
     (printout t "=========================" crlf)
     (printout t "1. House with garage" crlf)
@@ -579,8 +612,6 @@
 
         elif (eq ?choice 2) then 
             (deleteHouseNoGarage)
-
-
         )
 
         (printout t "============================================" crlf)
@@ -592,17 +623,17 @@
 )
 
 (deffacts house
-	(houseNoGarage (type "Cottage") (room 3) (price 7500) (location "South Jakarta")) 
-	(houseNoGarage (type "Light House") (room 3) (price 25000) (location "South Jakarta")) 
-	(houseNoGarage (type "Skyscraper") (room 4) (price 100000) (location "West Jakarta")) 
-	(houseNoGarage (type "Cottage") (room 2) (price 5000) (location "North Jakarta")) 
-	(houseNoGarage (type "Light House") (room 3) (price 10000) (location "West Jakarta"))  
-    
-	(houseWithGarage (type "Cottage") (room 3) (price 30000) (location "West Jakarta") (garage 2)) 
-	(houseWithGarage (type "Light House") (room 2) (price 7500) (location "South Jakarta") (garage 2)) 
-	(houseWithGarage (type "Cottage") (room 3) (price 4500) (location "North Jakarta") (garage 1)) 
-	(houseWithGarage (type "Skyscraper") (room 5) (price 175000) (location "South Jakarta") (garage 3)) 
-	(houseWithGarage (type "Light House") (room 4) (price 7500) (location "West Jakarta") (garage 1))    
+    "intentionally shuffled"
+	(houseNoGarage (id 1)(type "Cottage") (room 3) (price 7500) (location "South Jakarta")) 
+	(houseNoGarage (id 2)(type "Light House") (room 3) (price 25000) (location "South Jakarta"))
+    (houseWithGarage (id 1)(type "Cottage") (room 3) (price 4500) (location "North Jakarta") (garage 1)) 
+	(houseWithGarage (id 2)(type "Skyscraper") (room 5) (price 175000) (location "South Jakarta") (garage 3))
+	(houseNoGarage (id 3)(type "Skyscraper") (room 4) (price 100000) (location "West Jakarta")) 
+	(houseNoGarage (id 4)(type "Cottage") (room 2) (price 5000) (location "North Jakarta")) 
+	(houseWithGarage (id 3)(type "Cottage") (room 3) (price 30000) (location "West Jakarta") (garage 2)) 
+    (houseNoGarage (id 5)(type "Light House") (room 3) (price 10000) (location "West Jakarta"))  
+	(houseWithGarage (id 4)(type "Light House") (room 2) (price 7500) (location "South Jakarta") (garage 2)) 
+	(houseWithGarage (id 5)(type "Light House") (room 4) (price 7500) (location "West Jakarta") (garage 1))    
 )
 
 (reset)
@@ -612,6 +643,7 @@
 
 (while (neq ?choice 6)
     (menu)
+    (facts)
 
     ;inisialisasi flag validasi choice
     (bind ?flagChoice FALSE)
