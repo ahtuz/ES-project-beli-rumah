@@ -30,6 +30,14 @@
     (slot location)
 )
 
+(deftemplate houseWithGarageValidSearch
+    (slot id)
+    (slot type)
+    (slot room)
+    (slot price)
+    (slot location)
+)
+
 (defrule viewHouseWithGarage
     (view 1)
     (houseWithGarage (type ?type)(room ?room)(price ?price)(location ?loc)(garage ?garage))
@@ -69,16 +77,32 @@
     (retract ?modify)
 )
 
+(defrule swapID
+    ?swap <- (swap ?i ?idx)
+    ?current-fact <- (houseWithGarage (id ?i))
+    ?next-fact <- (houseWithGarage (id ?idx))
+    =>
+    (modify ?current-fact (id ?idx))
+    (modify ?next-fact (id ?i))
+    (retract ?swap)
+)
+
 (defrule deleteWithGarage
-	?delete <- (delete ?idx 1)
+	?delete <- (delete ?idx ?withGarageIDToken 1)
     ?data-fact <- (houseWithGarage (id ?idx))
     =>
-    (retract ?data-fact)
-    (bind ?withGarageIDFlag (bind ?*withGarageID* (-- ?*withGarageID*)))
-    (while (eq ?withGarageIDFlag 0)
-        (assert(houseWithGarage (id ?withGarageIDFlag)(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
-        (bind ?withGarageIDFlag (-- ?withGarageIDFlag))
+    (printout t "huehue")
+    (bind ?idx (- ?withGarageIDToken ?idx))
+    
+    (while (neq ?idx ?*withGarageID*)
+        (bind ?i (++ ?idx))
+    	(assert (swap ?i ?idx))
+        (run)
+        (bind ?i (++ ?i))
+        (bind ?idx (++ ?idx))
     )
+    
+    (retract ?data-fact)
     (retract ?delete)
 )
 
@@ -87,12 +111,51 @@
     ?data-fact <- (houseNoGarage (id ?idx))
     =>
     (retract ?data-fact)
-    (bind ?noGarageIDFlag (bind ?*noGarageID* (-- ?*noGarageID*)))
-    (while (eq ?noGarageIDFlag 0)
+    (bind ?*noGarageID* (-- ?*noGarageID*))
+    (bind ?noGarageIDFlag ?*noGarageID*)
+    (while (neq ?noGarageIDFlag 0)
         (assert(houseWithGarage (id ?noGarageIDFlag)(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
         (bind ?noGarageIDFlag (-- ?noGarageIDFlag))
     )
     (retract ?delete)
+)
+
+(defrule searchWithGarage
+	?search <- (search "With Garage" ?sIncome ?sLocation ?sType)
+    ;?data-fact <- (houseWithGarage (price ?price&:(<= ?price ?sIncome)) (location ?sLocation) (type ?sType))
+    ?data-fact <- (houseWithGarage (price ?price) (location ?location) (type ?type))
+    =>
+    (bind ?flagValidity 3)
+    
+    (bind ?withGarageIDFlag (bind ?*withGarageID* (-- ?*withGarageID*)))
+    (while (eq ?withGarageIDFlag 0)
+        (if(< ?sIncome ?price) then
+            (bind ?flagValidity (-- ?flagValidity))
+        )
+        (if(neq ?location ?sLocation) then
+            (bind ?flagValidity (-- ?flagValidity))
+        )
+        (if(neq ?type ?sType) then
+            (bind ?flagValidity (-- ?flagValidity))
+        )
+        (bind ?withGarageIDFlag (-- ?withGarageIDFlag))
+    )
+    
+    (if (>= ?flagValidity 2) then
+        (bind ?countValidity (++ ?countValidity))
+        (assert houseWithGarageValidSearch (id ?countValidity) )
+    )
+
+    ;(printout t ?data-fact ?price ?sLocation ?sType)
+    (retract ?search)
+)
+
+(defrule searchNoGarage
+	?search <- (search ?sPreferences ?sIncome ?sLocation ?sType)
+    ?data-fact <- (houseNoGarage (price ?price&:(< ?price ?sIncome)) (location ?location&:(= ?location ?sLocation)) (type ?type&:(= ?type ?sType)))
+    =>
+    (printout t ?data-fact)
+    (retract ?search)
 )
 
 (deffunction menu()
@@ -514,11 +577,10 @@
                 (bind ?flagChoice TRUE)
             else
                 (bind ?flagChoice TRUE)
-                (bind ?*withGarageID* (+ ?*withGarageID* 1))
-                (bind ?idx (- ?*withGarageID* ?idx))
-			    (assert (delete ?idx 1))
+                (bind ?withGarageIDToken (+ ?*withGarageID* 1))
+                (bind ?idx (- ?withGarageIDToken ?idx))
+			    (assert (delete ?idx ?withGarageIDToken 1))
                 (run)
-                (bind ?*withGarageID* (- ?*withGarageID* 1))
             )   
         else
             (bind ?flagChoice FALSE)
@@ -664,34 +726,34 @@
     (bind ?sType "")
     (bind ?sCar -1)
     
-    "name"
+    "input name"
     (bind ?flagChoice FALSE)
 
     (while(eq ?flagChoice FALSE)
-        (bind ?sName (readline)
-	    (if(or (< ?sName 3) (> ?sName 20)) then
+        (printout t "Input your name [3..20]: ")
+        (bind ?sName (readline))
+	    (if(or (< (str-length ?sName) 3) (> (str-length ?sName) 20)) then
 	       (bind ?flagChoice FALSE)
 	    else
-	       (bind ?sName TRUE)
+	       (bind ?flagChoice TRUE)
 	    )
-    ))
+    )
     
-    "gender"
+    "input gender"
     (while (and (neq ?sGender "Male")
             (neq ?sGender "Female"))
 		(printout t "Input your gender [Male | Female] (CASE-SENSITIVE): ")
         (bind ?sGender (readline))
     )
     
-    "search preferences"
+    "input search preferences"
     (while (and (neq ?sPreferences "With Garage")
             (neq ?sPreferences "Without Garage"))
 		(printout t "Input house preferences [With Garage | Without Garage] (CASE-SENSITIVE): ")
         (bind ?sPreferences (readline))
     )
     
-    "user income"
-    ;inisialisasi flag validasi house price
+    "input user income"
 	(bind ?flagChoice FALSE)
 
     (while(eq ?flagChoice FALSE)
@@ -703,7 +765,7 @@
         (if(eq (numberp ?sIncome) TRUE) then
             
             ;validasi income harus 10000...500000 dollars
-        	(if(or (< ?sIncome 10000) (> ?price 500000)) then
+        	(if(or (< ?sIncome 10000) (> ?sIncome 500000)) then
             	(bind ?flagChoice FALSE)
         	else
         		(bind ?flagChoice TRUE)
@@ -714,7 +776,7 @@
     	)
     )
     
-    "search house location"
+    "input search house location"
     (bind ?sLocation "")
     
     (while (and (neq ?sLocation "West Jakarta")
@@ -724,7 +786,7 @@
         (bind ?sLocation (readline))
     )
     
-    "search house type"
+    "input search house type"
     (while (and (neq ?sType "Cottage")
             (neq ?sType "Light House")
             (neq ?sType "Skyscraper"))
@@ -732,20 +794,19 @@
         (bind ?sType (readline))
     )
     
-    ;insert house garage
-    ;inisialisasi flag validasi house garage
+    "input car numbers"
 	(bind ?flagChoice FALSE)
 
     (while(eq ?flagChoice FALSE)
         
-        (printout t "Input garage number [1 - 5]: ")
-		(bind ?garage (read))
+        (printout t "Input number of car you own [1 - 5]: ")
+		(bind ?sCar (read))
         
-        ;validasi garage tipe adalah angka
-        (if(eq (numberp ?garage) TRUE) then
+        "validasi car numbers tipe adalah angka"
+        (if(eq (numberp ?sCar) TRUE) then
             
-            ;validasi garage harus 1...5
-        	(if(or (< ?garage 1) (> ?garage 5)) then
+            "validasi car numbers harus 1...5"
+        	(if(or (< ?sCar 1) (> ?sCar 5)) then
             	(bind ?flagChoice FALSE)
         	else
         		(bind ?flagChoice TRUE)
@@ -754,7 +815,10 @@
         else
         	(bind ?flagChoice FALSE)
     	)
-    )  
+    )
+    
+    (assert (search ?sPreferences ?sIncome ?sLocation ?sType))
+    (run)
 )
 
 (deffacts house
