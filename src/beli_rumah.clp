@@ -77,47 +77,62 @@
     (retract ?modify)
 )
 
-(defrule swapID
-    ?swap <- (swap ?i ?idx)
-    ?current-fact <- (houseWithGarage (id ?i))
-    ?next-fact <- (houseWithGarage (id ?idx))
+(defrule reassignHouseWithGarage
+    ?reassign <- (reassign ?nextIdx 1)
+    ?next-fact <- (houseWithGarage (id ?nextIdx))
     =>
-    (modify ?current-fact (id ?idx))
-    (modify ?next-fact (id ?i))
-    (retract ?swap)
+    (bind ?newIdx (- ?nextIdx 1))
+    (modify ?next-fact (id ?newIdx))
+    (retract ?reassign)
 )
 
-(defrule deleteWithGarage
-	?delete <- (delete ?idx ?withGarageIDToken 1)
-    ?data-fact <- (houseWithGarage (id ?idx))
+(defrule reassignHouseNoGarage
+    ?reassign <- (reassign ?nextIdx)
+    ?next-fact <- (houseNoGarage (id ?nextIdx))
     =>
-    (printout t "huehue")
-    (bind ?idx (- ?withGarageIDToken ?idx))
+    (bind ?newIdx (- ?nextIdx 1))
+    (modify ?next-fact (id ?newIdx))
+    (retract ?reassign)
+)
+
+
+(defrule deleteWithGarage
+	?delete <- (delete ?delIdx ?nextIdx 1)
+    ?del-fact <- (houseWithGarage (id ?delIdx))
+    =>
+    (retract ?del-fact)
+    (retract ?delete)
     
-    (while (neq ?idx ?*withGarageID*)
-        (bind ?i (++ ?idx))
-    	(assert (swap ?i ?idx))
+    (while (<= ?nextIdx ?*withGarageID*)
+        (assert (reassign ?nextIdx 1))
         (run)
-        (bind ?i (++ ?i))
-        (bind ?idx (++ ?idx))
+		(bind ?nextIdx (+ ?nextIdx 1))
     )
     
-    (retract ?data-fact)
-    (retract ?delete)
+    (bind ?*withGarageID* (- ?*withGarageID* 1))
 )
 
 (defrule deleteNoGarage
-	?delete <- (delete ?idx)
-    ?data-fact <- (houseNoGarage (id ?idx))
+	?delete <- (delete ?delIdx ?nextIdx)
+    ?del-fact <- (houseNoGarage (id ?delIdx))
     =>
-    (retract ?data-fact)
-    (bind ?*noGarageID* (-- ?*noGarageID*))
-    (bind ?noGarageIDFlag ?*noGarageID*)
-    (while (neq ?noGarageIDFlag 0)
-        (assert(houseWithGarage (id ?noGarageIDFlag)(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
-        (bind ?noGarageIDFlag (-- ?noGarageIDFlag))
-    )
+    (retract ?del-fact)
     (retract ?delete)
+    
+    (while (<= ?nextIdx ?*noGarageID*)
+        (assert (reassign ?nextIdx))
+        (run)
+		(bind ?nextIdx (+ ?nextIdx 1))
+    )
+    
+    (bind ?*noGarageID* (- ?*noGarageID* 1))
+)
+
+(defrule retractView
+    "untuk delete fact VIEW"
+    ?view <- (view ?i)
+    =>
+    (retract ?view)
 )
 
 (defrule searchWithGarage
@@ -578,8 +593,9 @@
             else
                 (bind ?flagChoice TRUE)
                 (bind ?withGarageIDToken (+ ?*withGarageID* 1))
-                (bind ?idx (- ?withGarageIDToken ?idx))
-			    (assert (delete ?idx ?withGarageIDToken 1))
+                (bind ?delIdx (- ?withGarageIDToken ?idx))
+                (bind ?nextIdx (+ ?delIdx 1))
+			    (assert (delete ?delIdx ?nextIdx 1))
                 (run)
             )   
         else
@@ -610,11 +626,11 @@
                 (bind ?flagChoice TRUE)
             else
                 (bind ?flagChoice TRUE)
-    			(bind ?*noGarageID* (+ ?*noGarageID* 1))
-                (bind ?idx (- ?*noGarageID* ?idx))
-			    (assert (delete ?idx))
+                (bind ?noGarageIDToken (+ ?*noGarageID* 1))
+                (bind ?delIdx (- ?noGarageIDToken ?idx))
+                (bind ?nextIdx (+ ?delIdx 1))
+			    (assert (delete ?delIdx ?nextIdx))
                 (run)
-                (bind ?*noGarageID* (- ?*noGarageID* 1))
             )      
         else
             (bind ?flagChoice FALSE)
