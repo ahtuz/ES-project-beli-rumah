@@ -190,13 +190,6 @@
     (retract ?search)    
 )
 
-(defrule showSearch
-	?showSearch <- (showSearch 1)    
-	=>
-    (new Template)
-    (retract ?showSearch)
-)
-
 (defrule searchWithGarage
     "rule to search house with garage"
 	?search <- (search "With Garage" ?sIncome ?sLocation ?sType ?sCar)
@@ -237,8 +230,6 @@
         )
         
         (assert (houseValidSearch(price ?price) (location ?location) (type ?type) (roomNumber ?roomNumber)(number ?garage)(match-rate ?tempRate)))
-        (run)
-        (assert (showSearch 1))
     )
 )
 
@@ -279,8 +270,6 @@
         )
         
         (assert (houseValidSearch(price ?price) (location ?location) (type ?type)(roomNumber ?roomNumber)(number 0)(match-rate ?tempRate)))
-        (run)
-        (assert (showSearch 1))
     )
 )
 
@@ -1074,6 +1063,7 @@
         
         elif (eq ?choice 5) then
         	(searchHouse)
+        	(new Template)
     )
     
     (clearScreen)
