@@ -1,174 +1,322 @@
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.Vector;
 
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.ScrollPaneLayout;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
 
 import jess.JessException;
 import jess.QueryResult;
 import jess.ValueVector;
 
 
-
-public class Template extends JFrame implements ActionListener{
+public class Template extends JFrame
+{	
+	JPanel content_panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 30));
 	
-	private static final long serialVersionUID = 1L;
+	JButton btnClose = new JButton("Close");
 	
-	JLabel [] label = new JLabel [10];
-	JTextArea [] txt = new JTextArea [10];
-	JButton close = new JButton("Close");
-	String []kata = new String[10];
-	JScrollPane pane = new JScrollPane();
-	JPanel pane2 = new JPanel();
-	// inisialisasi vector untuk setiap variabel house
-	Vector <String> vecId = new Vector<String>(); 
-	Vector <String> vecType = new Vector<String>(); 
-	Vector <String> vecRoom = new Vector<String>();
-	Vector <String> vecPrice = new Vector<String>(); 
-	Vector <String> vecLocation = new Vector<String>(); 
-	Vector <String> vecGarage = new Vector<String>(); 
-	Vector <String> vecMatch = new Vector<String>();
-	// inisialisasi vector untuk  variabel user
-	Vector <String> vecName = new Vector<String>(); 
-	Vector <String> vecGender = new Vector<String>(); 
-	Vector <String> vecPreference = new Vector<String>();
-	Vector <String> vecIncome = new Vector<String>(); 
-	Vector <String> vecUserLocation = new Vector<String>(); 
-	Vector <String> vecUserType = new Vector<String>(); 
-	Vector <String> vecCar = new Vector<String>();
-	String getQuery = new String();
-	String getUserInfo = new String();
+	String userName = "";
+	String userGender = "";
+	String userIncome = "";
+	String userWorkLocation = "";
+	String userHouseInterest = "";
+	String userHouseType = "";
+	String userPreferedGarageNumber = "";
 	
-	public Template(){
-		setTitle("Searched House Result");
-		setSize(300, 200);
-		pane.setLayout(new ScrollPaneLayout());
-		pane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		pane2.setLayout(new GridLayout(2, 3));
+	Vector<String> header = new Vector<String>();
+	Vector<Vector<String>> data = new Vector<Vector<String>>();
+	Vector<String> row;
+	
+	DefaultTableModel defaultTableModel;
+	JTable table;
+	JScrollPane scrollPane;
+	
+	final Template frame = this;
+	
+	public void initComponents()
+	{
+		getContentPane().setLayout(new BorderLayout());
 		
-		// check apakah search with garage atau without garage dari getUserPref
-		// getQuery -> bila preference with garage, maka data akan diambil dari getHouseWithGarage
-		// getQuery -> bila preference without garage, maka data akan diambil dari getHouseNoGarage
-		// getUserInfo -> bila preference with garage, maka data akan diambil dari getUserInfoWithGarage
-		// getUserInfo -> bila preference without garage, maka data akan diambil dari getUserInfoNoGarage
+		JLabel lblTitle = new JLabel("No Match Found!", JLabel.CENTER);
+		lblTitle.setFont(new Font(Font.MONOSPACED, Font.BOLD, 21));
+		getContentPane().add(lblTitle, BorderLayout.NORTH);
+		
+		JPanel left_panel = new JPanel(new BorderLayout());
+		JLabel lblHeader = new JLabel("Your Profile");
+		lblHeader.setFont(new Font(Font.MONOSPACED, Font.BOLD, 15));
+		left_panel.add(lblHeader, BorderLayout.NORTH);
+		
+		//Panel that contain all house's info
+		JPanel grid_panel = new JPanel(new GridLayout(7, 2));
+		
+		JLabel lblName = new JLabel("Name : ");
+		JLabel lblGender = new JLabel("Gender : ");
+		JLabel lblIncome = new JLabel("Income : ");
+		JLabel lblInterest = new JLabel("House Interest : ");
+		JLabel lblHouseLocation = new JLabel("Prefered House Location: ");
+		JLabel lblHouseType = new JLabel("Prefered House Type: ");
+		JLabel lblCarNumber = new JLabel("Prefered Garage Size:  ");
 
-		try{
-			QueryResult preference = Main.rete.runQueryStar("getUserPref", new ValueVector());
-			
-			if(preference.getString("preference") == "With Garage"){
-				getQuery = "getHouseWithGarage";
-				getUserInfo = "getUserInfoWithGarage";
-			} else if(preference.getString("preference") == "Without Garage"){
-				getQuery = "getHouseNoGarage";
-				getUserInfo = "getUserInfoNoGarage";
-			} else {
-				throw new NullPointerException("No Matches Found"); 
-			}
-			
-		} catch (JessException e) {
-			e.printStackTrace();
-			System.out.println("User Preferences Not Found");
-		}
-
-		kata[0] = "House ID";
-		kata[1] = "House Type";
-		kata[2] = "Room";
-		kata[3] = "Price";
-		kata[4] = "Location";
-		// jika hasil check with garage, maka harus dibuat garage
-		// jika hasil check without garage, tidak perlu garage, hanya match rate.
-		if(getQuery == "getHouseWithGarage"){
-			kata[5] = "Garage";
-			kata[6] = "Match Rate";
-		} else {
-			kata[5] = "Match Rate";
-		}
+		//Labels that contain house's info
+		JLabel lblNameInfo = new JLabel();
+		JLabel lblInterestInfo = new JLabel();
+		JLabel lblTypeInfo = new JLabel();
+		JLabel lblGenderInfo = new JLabel();
+		JLabel lblPriceInfo = new JLabel();
+		JLabel lblLocationInfo = new JLabel();
+		JLabel lblGarageNumberInfo = new JLabel();
 		
-		// source diambil dari contoh pada pertemuan 5
-		// untuk add data user info
-		/*try{
-			QueryResult user = Main.rete.runQueryStar(getUserInfo, new ValueVector());
-				vecName.add(user.getString("name"));
-				vecGender.add(user.getString("gender"));
-				vecPreference.add(user.getString("preference"));
-				vecIncome.add(user.getString("income"));
-				vecUserLocation.add(user.getString("location"));
-				vecUserType.add(user.getString("type"));
-				if(getUserInfo == "getUserInfoWithGarage"){
-					vecCar.add(user.getString("garage"));
-				}
-		} catch (JessException e) {
-			e.printStackTrace();
-		}*/
-		
-		// source diambil dari contoh pada pertemuan 5
-		// getQuery bergantung pada user preference
-		try{
-			QueryResult result = Main.rete.runQueryStar(getQuery, new ValueVector());
+		try
+		{
+			// Query Result Code Here
+			QueryResult resultMatchHouse = Main.rete.runQueryStar("getUserInfo", new ValueVector());
 			
-			while(result.next()){
-				vecId.add(result.getString("id"));
-				vecType.add(result.getString("type"));
-				vecRoom.add(result.getString("room"));
-				vecPrice.add(result.getString("price"));
-				vecLocation.add(result.getString("location"));
-				if(getQuery == "getHouseWithGarage"){
-					vecGarage.add(result.getString("garage"));
-				}
-				vecMatch.add(result.getString("match"));
-			}
-			
-			for (int i = 0; i < vecId.size() ; i++){
-				txt[0].append(vecId.get(i) + "\n");
-				txt[1].append(vecType.get(i) + "\n");
-				txt[2].append(vecRoom.get(i) + "\n");
-				txt[3].append(vecPrice.get(i) + "\n");
-				txt[4].append(vecLocation.get(i) + "\n");
-				if(getQuery == "getHouseWithGarage"){
-					txt[5].append(vecGarage.get(i) + "\n");
-					txt[6].append(vecMatch.get(i) + "% \n");
-				} else {
-					txt[5].append(vecMatch.get(i) + "% \n");
-				}
-			}
-		} catch (JessException e) {
-			e.printStackTrace();
-		}
-		
-		// bila house with garage berarti membutuhkan 6
-		// bila without garage, berarti hanya 5
-		if(getQuery == "getHouseWithGarage"){	
-			for(int i=0;i<6;i++)
+			if(resultMatchHouse.next())
 			{
-				pane2.add(txt[i]);
+				userName = resultMatchHouse.getString("name");
+				userGender = resultMatchHouse.getString("gender");
+				userHouseInterest = resultMatchHouse.getString("interest");
+				userWorkLocation = resultMatchHouse.getString("location");
+				userIncome = resultMatchHouse.getString("income");
+				userHouseType = resultMatchHouse.getString("type");
+				userPreferedGarageNumber = resultMatchHouse.getString("carCount");
+				
+				lblNameInfo.setText(userName);
+				lblGenderInfo.setText(userGender);
+				lblInterestInfo.setText(userHouseInterest);
+				lblTypeInfo.setText(userHouseType);
+				lblPriceInfo.setText(userIncome);
+				lblLocationInfo.setText(userWorkLocation);
+				lblGarageNumberInfo.setText(userPreferedGarageNumber);
+				
+				
+				if(userHouseInterest.equals("Without Garage"))
+				{
+					lblCarNumber.hide();
+					lblGarageNumberInfo.hide();
+				}
 			}
-		} else {
-			for(int i=0;i<5;i++)
+			
+			resultMatchHouse.close();
+		}
+		catch (JessException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		//Object that can be used as panel that contain image or table
+		Object panel_add = null;
+		
+		//No match found
+		panel_add = imageNotAvailable();
+		
+		/*Fill the code here to fetch all suitable match for user*/
+		
+		header.add("No.");
+		header.add("House Type");
+		header.add("House Room Number");
+		header.add("House Price");
+		header.add("House Location");
+		if(userHouseInterest.equals("With Garage"))header.add("Garage Capacity");
+		header.add("match-rate");
+		
+		defaultTableModel = new DefaultTableModel(data, header);
+		table = new JTable(defaultTableModel);
+		scrollPane = new JScrollPane(table);
+		
+		int index = 0;
+		
+		if(userHouseInterest.equals("With Garage"))
+		{
+			try
 			{
-				pane2.add(txt[i]);
+				// Query Result Code Here
+				QueryResult resultMatchWithGarage = Main.rete.runQueryStar("getValidHouse", new ValueVector());
+				
+				while(resultMatchWithGarage.next())
+				{
+					index++;
+					
+					String type = resultMatchWithGarage.getString("type");
+					String roomNumber = resultMatchWithGarage.getString("roomNumber");
+					String price = resultMatchWithGarage.getString("price");
+					String location = resultMatchWithGarage.getString("location");
+					String garageNumber = resultMatchWithGarage.getString("number");
+					String matchRate = resultMatchWithGarage.getString("match-rate");
+					
+					
+					row = new Vector<String>();
+					
+					row.add(Integer.toString(index));
+					row.add(type);
+					row.add(roomNumber);
+					row.add(price+" $USD");
+					row.add(location);
+					row.add(garageNumber);
+					row.add(matchRate+"%");
+					
+					
+					data.add(row);
+				}
+				
+				resultMatchWithGarage.close();
+				
+				
+			}
+			catch (JessException e)
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
+		else if(userHouseInterest.equals("Without Garage"))
+		{
+			try
+			{
+				// Query Result Code Here
+				QueryResult resultMatchWithoutGarage = Main.rete.runQueryStar("getValidHouse", new ValueVector());
+				
+				while(resultMatchWithoutGarage.next())
+				{
+					index++;
+					
+					String type = resultMatchWithoutGarage.getString("type");
+					String roomNumber = resultMatchWithoutGarage.getString("roomNumber");
+					String price = resultMatchWithoutGarage.getString("price");
+					String location = resultMatchWithoutGarage.getString("location");
+					String matchRate = resultMatchWithoutGarage.getString("match-rate");
+				
+					
+					row = new Vector<String>();
+					
+					row.add(Integer.toString(index));
+					row.add(type);
+					row.add(roomNumber);
+					row.add(price+" $USD");
+					row.add(location);
+					row.add(matchRate+"%");
+				
+					
+					data.add(row);
+				}
+				
+				resultMatchWithoutGarage.close();
+				
+				
+			}
+			catch (JessException e)
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		if(data.size() != 0 )
+		{
+			panel_add = scrollPane;
+			lblTitle.setText("Matches Found!");
+		}
+		
+		grid_panel.add(lblName);
+		grid_panel.add(lblNameInfo);
+		
+		grid_panel.add(lblGender);
+		grid_panel.add(lblGenderInfo);
+		
+		grid_panel.add(lblInterest);
+		grid_panel.add(lblInterestInfo);
+		
+		grid_panel.add(lblIncome);
+		grid_panel.add(lblPriceInfo);
+		
+		grid_panel.add(lblHouseLocation);
+		grid_panel.add(lblLocationInfo);
+		
+		grid_panel.add(lblHouseType);
+		grid_panel.add(lblTypeInfo);
+		
+		grid_panel.add(lblCarNumber);
+		grid_panel.add(lblGarageNumberInfo);
 	
-		add(pane);
-		pane.getViewport().add(pane2);
-		add(close,"South");
-		close.addActionListener(this);
+		
+		left_panel.add(grid_panel, BorderLayout.CENTER);
+		
+		content_panel.add(left_panel);
+		content_panel.add((Component) panel_add);
+		content_panel.setPreferredSize(new Dimension (800, 450));
+		
+		getContentPane().add(content_panel, BorderLayout.CENTER);
+		getContentPane().add(btnClose, BorderLayout.PAGE_END);
+		
+		btnClose.addActionListener(new ActionListener()
+		{
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0)
+			{
+				frame.dispose();
+			}
+		});
+	}
+	
+	private Image getScaledImage(Image srcImage, int width, int height)
+	{
+		BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d = resizedImage.createGraphics();
+		
+		g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+		g2d.drawImage(srcImage, 0, 0, width, height, null);
+		g2d.dispose();
+		
+		return resizedImage;
+	}
+	
+	public JLabel imageNotAvailable()
+	{
+		JLabel lbl_img = new JLabel();
+		lbl_img.setPreferredSize(new Dimension(320,180));
+		Image bufferedImage;
+		try
+		{
+			bufferedImage = ImageIO.read(getClass().getResource("not_available.jpg"));
+			ImageIcon icon = new ImageIcon(getScaledImage(bufferedImage, 320, 180));
+			lbl_img.setIcon(icon);
+		}
+		catch (IOException e)
+		{
+			return null;
+		}
+		return lbl_img;
+	}
+	
+	public Template()
+	{
+		setTitle("The Result of Consultation");
+		setSize(850, 450);
 		setLocationRelativeTo(null);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		initComponents();
+		setResizable(false);
 		setVisible(true);
-		
 	}
-
-	public void actionPerformed(ActionEvent arg0) {
-		if(arg0.getSource()==close)
-			this.dispose();
-	}
-	
 }

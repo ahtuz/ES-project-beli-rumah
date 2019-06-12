@@ -3,12 +3,10 @@
     ?*noGarageCount* = 0
     ?*withGarageID* = 5
     ?*noGarageID* = 5
-    ?*countValidity* = 0
 )
 
 ; withGarageCount & noGarageCount is for the view house rule
 ; withGarageID & noGarageID starts from 5 because there are 5 initial facts
-; countValidity untuk menghitung jumlah search house yang valid
 
 ; NOTE:
 ; soalnya agak ambigu pada bagian menu SEARCH
@@ -41,77 +39,35 @@
     (slot location)
 )
 
-(deftemplate houseWithGarageValidSearch
+(deftemplate houseValidSearch
     "template for containing searched house with garage"
-    (slot id)
     (slot type)
-    (slot room)
+    (slot roomNumber)
     (slot price)
     (slot location)
-    (slot garage)
-    (slot match)
+    (slot number)
+    (slot match-rate)
 )
 
-(deftemplate houseNoGarageValidSearch
-    "template for containing searched house without garage"
-    (slot id)
-    (slot type)
-    (slot room)
-    (slot price)
-    (slot location)
-    (slot match)
-)
-
-(deftemplate userSearchInfoWithGarage
+(deftemplate userSearchInfo
     "template for containing user preferred with garage house provided information"
     (slot name)
     (slot gender)
-    (slot preference)
+    (slot interest)
     (slot type)
     (slot income)
     (slot location)
-    (slot garage)
+    (slot carCount)
 )
 
-(deftemplate userSearchInfoNoGarage
-    "template for containing user preferred without garage house provided information"
-    (slot name)
-    (slot gender)
-    (slot preference)
-    (slot type)
-    (slot income)
-    (slot location)
+(defquery getValidHouse
+    "untuk query house info"
+    (houseValidSearch (type ?type) (roomNumber ?roomNumber) (price ?price) (location ?location) (number ?number) (match-rate ?match-rate))
 )
 
-(deftemplate userPreference
-    "template untuk menyimpan preferensi user"
-    ; digunakan untuk membedakan with garage dan without garage pada GUI
-    (slot preference)
-)
-
-(defquery getHouseWithGarage
-    "untuk query house info with garage"
-    (houseWithGarageValidSearch (id ?id) (type ?type) (room ?room) (price ?price) (location ?location) (garage ?garage) (match ?match))
-)
-
-(defquery getHouseNoGarage
-    "untuk query house info without garage"
-    (houseNoGarageValidSearch (id ?id) (type ?type) (room ?room) (price ?price) (location ?location) (match ?match))
-)
-
-(defquery getUserInfoWithGarage
-    "untuk query user info with garage"
-	(userSearchInfoWithGarage (name ?name)(gender ?gender)(preference ?preference)(type ?type)(income ?income)(location ?location)(garage ?garage))
-)
-
-(defquery getUserInfoNoGarage
-    "untuk query user info without garage"
-    (userSearchInfoWithGarage (name ?name)(gender ?gender)(preference ?preference)(type ?type)(income ?income)(location ?location))
-)
-
-(defquery getUserPref
-    "untuk membedakan yang harus diambil (user preference with/without garage) pada GUI"
-    (userPreference (preference ?preference))
+(defquery getUserInfo
+    "untuk query user inputted info"
+	(userSearchInfo (name ?name)(gender ?gender)(interest ?interest)(location ?location)(income ?income)(type ?type)(carCount ?carCount))
 )
 
 (defrule viewHouseWithGarage
@@ -234,10 +190,17 @@
     (retract ?search)    
 )
 
+(defrule showSearch
+	?showSearch <- (showSearch 1)    
+	=>
+    (new Template)
+    (retract ?showSearch)
+)
+
 (defrule searchWithGarage
     "rule to search house with garage"
 	?search <- (search "With Garage" ?sIncome ?sLocation ?sType ?sCar)
-    ?data-fact <- (houseWithGarage (price ?price) (location ?location) (type ?type)(garage ?garage))
+    ?data-fact <- (houseWithGarage (price ?price) (location ?location) (type ?type)(room ?roomNumber)(garage ?garage))
     =>
     ; untuk mengecek validitas setiap house dibandingkan dengan user input
     ; validity 3 artinya masih TRUE semua
@@ -273,16 +236,16 @@
             (bind ?tempRate (- ?tempRate 10))
         )
         
-        ; *countValidity* untuk assert id setiap house yang valid
-        (bind ?*countValidity* (++ ?*countValidity*))
-        (assert (houseWithGarageValidSearch (id ?*countValidity*)(price ?price) (location ?location) (type ?type)(garage ?garage)(match ?tempRate)))
+        (assert (houseValidSearch(price ?price) (location ?location) (type ?type) (roomNumber ?roomNumber)(number ?garage)(match-rate ?tempRate)))
+        (run)
+        (assert (showSearch 1))
     )
 )
 
 (defrule searchNoGarage
     "rule to search house with garage"
-	?search <- (search "Without Garage" ?sIncome ?sLocation ?sType)
-    ?data-fact <- (houseNoGarage (price ?price) (location ?location) (type ?type))
+	?search <- (search "Without Garage" ?sIncome ?sLocation ?sType ?sCar)
+    ?data-fact <- (houseNoGarage (price ?price) (location ?location) (type ?type) (room ?roomNumber))
     =>
     ; untuk mengecek validitas setiap house dibandingkan dengan user input
     ; validity 3 artinya masih TRUE semua
@@ -315,9 +278,9 @@
             (bind ?tempRate (- ?tempRate 5))
         )
         
-        ; *countValidity* untuk assert id setiap house yang valid
-        (bind ?*countValidity* (++ ?*countValidity*))
-        (assert (houseNoGarageValidSearch (id ?*countValidity*)(price ?price)(location ?location)(type ?type)(match ?tempRate)))
+        (assert (houseValidSearch(price ?price) (location ?location) (type ?type)(roomNumber ?roomNumber)(number 0)(match-rate ?tempRate)))
+        (run)
+        (assert (showSearch 1))
     )
 )
 
@@ -1032,12 +995,9 @@
 	    (bind ?*countValidity* 0)
 	    
 	    ; masukkan ke dalam template user info with garage
-	    (assert (userSearchInfoWithGarage (name ?sName)(gender ?sGender)(preference ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)(garage ?sCar)))
-	    
-        ; masukkan preferensi ke dalam userPreference
-        (assert (userPreference (preference ?sPreferences)))
+	    (assert (userSearchInfo(name ?sName)(gender ?sGender)(interest ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)(carCount ?sCar)))
         
-	    ; masukkan ke dalam defrule search house sesuai dengan preferensi with garage
+	    ; masukkan ke dalam defrule search house sesuai dengan preferensi (interest) with garage
 	    (assert (search ?sPreferences ?sIncome ?sLocation ?sType ?sCar))
     	(run)
         
@@ -1046,13 +1006,10 @@
             ; mereset countValidity jadi 0 kembali
 		    (bind ?*countValidity* 0)
 		    
-		    ; masukkan ke dalam template user info without garage
-		    (assert (userSearchInfoNoGarage (name ?sName)(gender ?sGender)(preference ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)))
-		    
-            ; masukkan preferensi ke dalam userPreference
-        	(assert (userPreference (preference ?sPreferences)))
+		    ; masukkan ke dalam template user info without garage (artinya car = 0)
+		    (assert (userSearchInfo (name ?sName)(gender ?sGender)(interest ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)(carCount 0)))
             
-		    ; masukkan ke dalam defrule search house sesuai dengan preferensi without garage
+		    ; masukkan ke dalam defrule search house sesuai dengan preferensi (interest) without garage
 		    (assert (search ?sPreferences ?sIncome ?sLocation ?sType))
     		(run)
         )

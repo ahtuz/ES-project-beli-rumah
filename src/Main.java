@@ -10,13 +10,10 @@ public class Main {
 		
 		try {
 			rete.batch("beli_rumah.clp");
-//			sesuaikan nama di clp
 			rete.reset();
 			rete.run();
 		} catch (JessException e) {
 			e.printStackTrace();
 		}
-		
 	}
-
 }
