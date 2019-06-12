@@ -1067,7 +1067,6 @@
         elif (eq ?choice 5) then
         	(searchHouse)
         	(new Template)
-        	(facts)
         	(assert (retractResult 1))
         	(run)
     )
