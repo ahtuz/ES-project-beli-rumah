@@ -3,16 +3,27 @@
     ?*noGarageCount* = 0
     ?*withGarageID* = 5
     ?*noGarageID* = 5
+    ?*countValidity* = 0
 )
 
-"withGarageCount & noGarageCount is for the view house rule"
-"withGarageID & noGarageID starts from 5 because there are 5 initial facts"
+; withGarageCount & noGarageCount is for the view house rule
+; withGarageID & noGarageID starts from 5 because there are 5 initial facts
+; countValidity untuk menghitung jumlah search house yang valid
 
-;not yet make global idx for add
-;not yet make idx for differentiate with garage & no garage
+; NOTE:
+; soalnya agak ambigu pada bagian menu SEARCH
+; pada contoh diberikan 2T & 1F -> TRUE
+; bagaimana dengan 1T & 2F? apakah dianggap TRUE juga?
+; oleh karena itu, kami anggap SETIDAKNYA ada 1 KRITERIA saja yang cocok,
+; maka house akan dimasukkan ke hasil search house yang valid dan akan dihitung match rate nya
+
+; ada sedikit error dari jess:
+; bila modify (update) suatu data, maka data tersebut otomatis menjadi facts terakhir
+; sehingga bila di-view setelah modify akan muncul jadi data yang paling pertama
+; hal tersebut bisa mempengaruhi saat kita ingin delete/update data untuk selanjutnya
 
 (deftemplate houseWithGarage
-    ;template house with garage
+    "template house with garage"
     (slot id)
     (slot type)
     (slot room)
@@ -22,7 +33,7 @@
 )
 
 (deftemplate houseNoGarage
-    ;template house without garage
+    "template house without garage"
     (slot id)
     (slot type)
     (slot room)
@@ -31,37 +42,119 @@
 )
 
 (deftemplate houseWithGarageValidSearch
+    "template for containing searched house with garage"
     (slot id)
     (slot type)
     (slot room)
     (slot price)
     (slot location)
+    (slot garage)
+    (slot match)
+)
+
+(deftemplate houseNoGarageValidSearch
+    "template for containing searched house without garage"
+    (slot id)
+    (slot type)
+    (slot room)
+    (slot price)
+    (slot location)
+    (slot match)
+)
+
+(deftemplate userSearchInfoWithGarage
+    "template for containing user preferred with garage house provided information"
+    (slot name)
+    (slot gender)
+    (slot preference)
+    (slot type)
+    (slot income)
+    (slot location)
+    (slot garage)
+)
+
+(deftemplate userSearchInfoNoGarage
+    "template for containing user preferred without garage house provided information"
+    (slot name)
+    (slot gender)
+    (slot preference)
+    (slot type)
+    (slot income)
+    (slot location)
+)
+
+(deftemplate userPreference
+    "template untuk menyimpan preferensi user"
+    ; digunakan untuk membedakan with garage dan without garage pada GUI
+    (slot preference)
+)
+
+(defquery getHouseWithGarage
+    "untuk query house info with garage"
+    (houseWithGarageValidSearch (id ?id) (type ?type) (room ?room) (price ?price) (location ?location) (garage ?garage) (match ?match))
+)
+
+(defquery getHouseNoGarage
+    "untuk query house info without garage"
+    (houseNoGarageValidSearch (id ?id) (type ?type) (room ?room) (price ?price) (location ?location) (match ?match))
+)
+
+(defquery getUserInfoWithGarage
+    "untuk query user info with garage"
+	(userSearchInfoWithGarage (name ?name)(gender ?gender)(preference ?preference)(type ?type)(income ?income)(location ?location)(garage ?garage))
+)
+
+(defquery getUserInfoNoGarage
+    "untuk query user info without garage"
+    (userSearchInfoWithGarage (name ?name)(gender ?gender)(preference ?preference)(type ?type)(income ?income)(location ?location))
+)
+
+(defquery getUserPref
+    "untuk membedakan yang harus diambil (user preference with/without garage) pada GUI"
+    (userPreference (preference ?preference))
 )
 
 (defrule viewHouseWithGarage
+    "rule for view house with garage"
     (view 1)
     (houseWithGarage (type ?type)(room ?room)(price ?price)(location ?loc)(garage ?garage))
     =>
+    (printout t "| ")
     (bind ?*withGarageCount* (++ ?*withGarageCount*))
-    (printout t ?*withGarageCount* ". | " ?type " | " ?room " | " ?price " | " ?loc " | " ?garage " |" crlf)
+    (printout t ?*withGarageCount* " . | ")
+    (format t %-14s (str-cat ?type))
+    (printout t " |  " ?room "   | ")
+    (format t %-10s (str-cat ?price " $ "))
+    (printout t "| ")
+    (format t %-15s (str-cat ?loc))
+    (printout t "|    " ?garage "   |" crlf)
 )
 
 (defrule viewHouseNoGarage
+    "rule for view house without garage"
     (view 0)
     (houseNoGarage (type ?type)(room ?room)(price ?price)(location ?loc))
     =>
+    (printout t "| ")
     (bind ?*noGarageCount* (++ ?*noGarageCount*))
-    (printout t ?*noGarageCount* ". | " ?type " | " ?room " | " ?price " | " ?loc " |" crlf)
+    (printout t ?*noGarageCount* " . | ")
+    (format t %-14s (str-cat ?type))
+    (printout t " |  " ?room "   | ")
+    (format t %-10s (str-cat ?price " $ "))
+    (printout t "| ")
+    (format t %-15s (str-cat ?loc))
+    (printout t "|" crlf)
 )
 
 (defrule retractView
-    "untuk delete fact VIEW"
+    "rule used for delete fact view"
     ?view <- (view ?i)
     =>
     (retract ?view)
 )
 
 (defrule updateWithGarage
+    "rule to update house with garage"
 	?modify <- (modify ?idx 1)
     ?data-fact <- (houseWithGarage (id ?idx))
     =>
@@ -70,6 +163,7 @@
 )
 
 (defrule updateNoGarage
+    "rule to update house without garage"
 	?modify <- (modify ?idx)
     ?data-fact <- (houseNoGarage (id ?idx))
     =>
@@ -78,6 +172,7 @@
 )
 
 (defrule reassignHouseWithGarage
+    "rule to assign new id value for other house (with garage) after delete"
     ?reassign <- (reassign ?nextIdx 1)
     ?next-fact <- (houseWithGarage (id ?nextIdx))
     =>
@@ -87,23 +182,27 @@
 )
 
 (defrule reassignHouseNoGarage
+    "rule to assign new id value for other house (without garage) after delete"
     ?reassign <- (reassign ?nextIdx)
     ?next-fact <- (houseNoGarage (id ?nextIdx))
     =>
+    ; assign idx dari idx setelah house yang didelete dikurangi 1.
+    ; e.g. deleted idx = 3, next idx from delete idx = 4, assign next idx menjadi 3.
     (bind ?newIdx (- ?nextIdx 1))
     (modify ?next-fact (id ?newIdx))
     (retract ?reassign)
 )
 
-
 (defrule deleteWithGarage
+    "rule to delete desired house with garage from the index"
 	?delete <- (delete ?delIdx ?nextIdx 1)
     ?del-fact <- (houseWithGarage (id ?delIdx))
     =>
     (retract ?del-fact)
     (retract ?delete)
-    
+
     (while (<= ?nextIdx ?*withGarageID*)
+        ; reassign akan dilakukan sampai nextIdx = jumlah data house with garage
         (assert (reassign ?nextIdx 1))
         (run)
 		(bind ?nextIdx (+ ?nextIdx 1))
@@ -113,6 +212,7 @@
 )
 
 (defrule deleteNoGarage
+    "rule to delete desired house without garage from the index"
 	?delete <- (delete ?delIdx ?nextIdx)
     ?del-fact <- (houseNoGarage (id ?delIdx))
     =>
@@ -128,53 +228,101 @@
     (bind ?*noGarageID* (- ?*noGarageID* 1))
 )
 
-(defrule retractView
-    "untuk delete fact VIEW"
-    ?view <- (view ?i)
+(defrule retractSearch
+	?search <- (search ?sPreferences ?sIncome ?sLocation ?sType)
     =>
-    (retract ?view)
+    (retract ?search)    
 )
 
 (defrule searchWithGarage
-	?search <- (search "With Garage" ?sIncome ?sLocation ?sType)
-    ;?data-fact <- (houseWithGarage (price ?price&:(<= ?price ?sIncome)) (location ?sLocation) (type ?sType))
-    ?data-fact <- (houseWithGarage (price ?price) (location ?location) (type ?type))
+    "rule to search house with garage"
+	?search <- (search "With Garage" ?sIncome ?sLocation ?sType ?sCar)
+    ?data-fact <- (houseWithGarage (price ?price) (location ?location) (type ?type)(garage ?garage))
     =>
-    (bind ?flagValidity 3)
+    ; untuk mengecek validitas setiap house dibandingkan dengan user input
+    ; validity 3 artinya masih TRUE semua
+    ; validity akan dikurangi 1 setiap ada 1 FALSE
+    ; tempRate untuk counter match rate
     
-    (bind ?withGarageIDFlag (bind ?*withGarageID* (-- ?*withGarageID*)))
-    (while (eq ?withGarageIDFlag 0)
+    (bind ?flagValidity 3)
+    (bind ?tempRate 100)
+    
+    ; cek dahulu apakah masuk kriteria
+    (if(< ?sIncome ?price) then
+        (bind ?flagValidity (- ?flagValidity 1))
+    )
+    (if(neq ?location ?sLocation) then
+        (bind ?flagValidity (-- ?flagValidity))
+    )
+    (if(neq ?type ?sType) then
+        (bind ?flagValidity (-- ?flagValidity))
+    )
+    
+    ; menghitung match rate untuk data search yang valid (validity >= 1)
+    (if (>= ?flagValidity 1) then
         (if(< ?sIncome ?price) then
-            (bind ?flagValidity (-- ?flagValidity))
+            (bind ?tempRate (- ?tempRate 10))
         )
         (if(neq ?location ?sLocation) then
-            (bind ?flagValidity (-- ?flagValidity))
+            (bind ?tempRate (- ?tempRate 10))
         )
         (if(neq ?type ?sType) then
-            (bind ?flagValidity (-- ?flagValidity))
+            (bind ?tempRate (- ?tempRate 5))
         )
-        (bind ?withGarageIDFlag (-- ?withGarageIDFlag))
+        (if(< ?garage ?sCar) then
+            (bind ?tempRate (- ?tempRate 10))
+        )
+        
+        ; *countValidity* untuk assert id setiap house yang valid
+        (bind ?*countValidity* (++ ?*countValidity*))
+        (assert (houseWithGarageValidSearch (id ?*countValidity*)(price ?price) (location ?location) (type ?type)(garage ?garage)(match ?tempRate)))
     )
-    
-    (if (>= ?flagValidity 2) then
-        (bind ?countValidity (++ ?countValidity))
-        (assert houseWithGarageValidSearch (id ?countValidity) )
-    )
-
-    ;(printout t ?data-fact ?price ?sLocation ?sType)
-    (retract ?search)
 )
 
 (defrule searchNoGarage
-	?search <- (search ?sPreferences ?sIncome ?sLocation ?sType)
-    ?data-fact <- (houseNoGarage (price ?price&:(< ?price ?sIncome)) (location ?location&:(= ?location ?sLocation)) (type ?type&:(= ?type ?sType)))
+    "rule to search house with garage"
+	?search <- (search "Without Garage" ?sIncome ?sLocation ?sType)
+    ?data-fact <- (houseNoGarage (price ?price) (location ?location) (type ?type))
     =>
-    (printout t ?data-fact)
-    (retract ?search)
+    ; untuk mengecek validitas setiap house dibandingkan dengan user input
+    ; validity 3 artinya masih TRUE semua
+    ; validity akan dikurangi 1 setiap ada 1 FALSE
+    ; tempRate untuk counter match rate
+    
+    (bind ?flagValidity 3)
+    (bind ?tempRate 100)
+    
+    ; cek dahulu apakah masuk kriteria
+    (if(< ?sIncome ?price) then
+        (bind ?flagValidity (- ?flagValidity 1))
+    )
+    (if(neq ?location ?sLocation) then
+        (bind ?flagValidity (-- ?flagValidity))
+    )
+    (if(neq ?type ?sType) then
+        (bind ?flagValidity (-- ?flagValidity))
+    )
+    
+    ; menghitung match rate untuk data search yang valid (validity >= 1)
+    (if (>= ?flagValidity 1) then
+        (if(< ?sIncome ?price) then
+            (bind ?tempRate (- ?tempRate 10))
+        )
+        (if(neq ?location ?sLocation) then
+            (bind ?tempRate (- ?tempRate 10))
+        )
+        (if(neq ?type ?sType) then
+            (bind ?tempRate (- ?tempRate 5))
+        )
+        
+        ; *countValidity* untuk assert id setiap house yang valid
+        (bind ?*countValidity* (++ ?*countValidity*))
+        (assert (houseNoGarageValidSearch (id ?*countValidity*)(price ?price)(location ?location)(type ?type)(match ?tempRate)))
+    )
 )
 
 (deffunction menu()
-    ;menu
+    "display menu"
 	(printout t "================" crlf)
 	(printout t "|| Beli Rumah ||" crlf)
 	(printout t "================" crlf)
@@ -187,19 +335,20 @@
 )
 
 (deffunction clearScreen()
-    ;clear screen
+    "function untuk clear screen"
     (for (bind ?x 0)(< ?x 10)(++ ?x)
         (printout t crlf)
     )
 )
 
 (deffunction viewHouse()
+    "view house menu"
     (printout t "List of house to be viewed" crlf)
     (printout t "============================================" crlf)
     (printout t "1. House with Garage" crlf)
     (printout t "2. House without Garage" crlf)
     
-    ;inisialisasi viewHouse choice
+    "inisialisasi viewHouse choice"
     (bind ?choice -1)
     
     (while (neq ?choice 0)
@@ -227,24 +376,30 @@
 	    )
         
         (if (eq ?choice 1) then
-            	(printout t "House With Garage" crlf)
-            	"view 1 berarti run defrule viewHouseWithGarage"
+            	(printout t crlf "House With Garage" crlf)
+            	; view 1 berarti run defrule viewHouseWithGarage
+                (printout t "=====================================================================" crlf)
+            	(printout t "| No. |   House Type   | Room |  Price    |    Location    | Garage |" crlf)
+            	(printout t "=====================================================================" crlf)
             	(bind ?*withGarageCount* 0)
                 (assert (view 1))
             	(run)
-            	(printout t "============================================" crlf)
+            	(printout t "=====================================================================" crlf)
             	(bind ?choice 0)
             	(printout t "Press Enter to Continue...")
             	(readline)
             
 	        elif (eq ?choice 2) then
-	        	(printout t "House Without Garage" crlf)
-            	"view 0 berarti run defrule viewHouseNoGarage"
+	        	(printout t crlf "House Without Garage" crlf)
+            	; view 0 berarti run defrule viewHouseNoGarage
+            	(printout t "============================================================" crlf)
+            	(printout t "| No. |   House Type   | Room |  Price    |    Location    |" crlf)
+            	(printout t "============================================================" crlf)
             	(bind ?*noGarageCount* 0)
 	            (assert (view 0))
                 (run)
-            	(printout t "============================================" crlf)
-	        	;agar bisa keluar dari looping awal
+            	(printout t "============================================================" crlf)
+	        	; agar bisa keluar dari looping awal
 	            (bind ?choice 0)
                 (printout t "Press Enter to Continue...")
             	(readline)
@@ -254,7 +409,7 @@
 
 (deffunction addHouseWithGarage()
     
-    ;insert house type
+    ; insert house type
     (bind ?type "")
     
     (while (and (neq ?type "Cottage")
@@ -264,7 +419,7 @@
         (bind ?type (readline))
     )
     
-    ;insert room number
+    ; insert room number
     (bind ?room 0)
     
     (while (or (< ?room 1)
@@ -273,22 +428,22 @@
         (bind ?room (read))
     )
     
-    ;insert house price
+    ; insert house price
     (bind ?price 0)
     
-    ;inisialisasi flag validasi house price
+    ; inisialisasi flag validasi house price
 	(bind ?flagChoice FALSE)
 
     (while(eq ?flagChoice FALSE)
         
-        (printout t "Input house price [1000 - 5000000] (dollars): ")
+        (printout t "Input house price [1000 - 500000] (dollars): ")
 		(bind ?price (read))
         
-        ;validasi price tipe adalah angka
+        ; validasi price tipe adalah angka
         (if(eq (numberp ?price) TRUE) then
             
-            ;validasi price harus 1000...5000000 dollars
-        	(if(or (< ?price 1000) (> ?price 5000000)) then
+            ; validasi price harus 1000...500000 dollars
+        	(if(or (< ?price 1000) (> ?price 500000)) then
             	(bind ?flagChoice FALSE)
         	else
         		(bind ?flagChoice TRUE)
@@ -336,14 +491,17 @@
     	)
     )  
     
-    (bind ?id (++ ?*withGarageID*))
+    ; add jumlah house untuk house with garage
+    ; assign id house baru dengan id terakhir
+    (bind ?*withGarageID* (+ ?*withGarageID* 1))
+    (bind ?id ?*withGarageID*)
     (assert(houseWithGarage (id ?id)(type ?type)(room ?room)(price ?price)(location ?location)(garage ?garage)))
     
 )
 
 (deffunction addHouseNoGarage()
     
-    ;insert house type
+    ; insert house type
     (bind ?type "")
     
     (while (and (neq ?type "Cottage")
@@ -353,7 +511,7 @@
         (bind ?type (readline))
     )
     
-    ;insert room number
+    ; insert room number
     (bind ?room 0)
     
     (while (or (< ?room 1)
@@ -362,22 +520,22 @@
         (bind ?room (read))
     )
     
-    ;insert house price
+    ; insert house price
     (bind ?price 0)
     
-    ;inisialisasi flag validasi house price
+    ; inisialisasi flag validasi house price
 	(bind ?flagChoice FALSE)
 
     (while(eq ?flagChoice FALSE)
         
-        (printout t "Input house price [1000 - 5000000] (dollars): ")
+        (printout t "Input house price [1000 - 500000] (dollars): ")
 		(bind ?price (read))
         
-        ;validasi price tipe adalah angka
+        ; validasi price tipe adalah angka
         (if(eq (numberp ?price) TRUE) then
             
-            ;validasi price harus 1000...5000000 dollars
-        	(if(or (< ?price 1000) (> ?price 5000000)) then
+            ; validasi price harus 1000...500000 dollars
+        	(if(or (< ?price 1000) (> ?price 500000)) then
             	(bind ?flagChoice FALSE)
         	else
         		(bind ?flagChoice TRUE)
@@ -398,12 +556,16 @@
         (bind ?location (readline))
     )
     
-    (bind ?id (++ ?*noGarageID*))
+    ; add jumlah house untuk house without garage
+    ; assign id house baru dengan id terakhir
+    (bind ?*noGarageID* (+ ?*noGarageID* 1))
+    (bind ?id ?*noGarageID*)
     (assert(houseNoGarage (id ?id)(type ?type)(room ?room)(price ?price)(location ?location)))
     
 )
 
 (deffunction addHouse()
+    "menu utama untuk add house"
 	(printout t "Type of house to be addded" crlf)
     (printout t "============================================" crlf)
     (printout t "1. House with Garage" crlf)
@@ -421,10 +583,10 @@
 	        (printout t "Choose [ 1/2 | 0 to back to main menu ]: ")
         	(bind ?choice (read))
 	        
-	        ;validasi tipe data choice adalah angka
+	        ; validasi tipe data choice adalah angka
 	        (if(eq (numberp ?choice) TRUE) then
 	            
-	            ;validasi choice harus 1...2
+	            ; validasi choice harus 1...2
 	        	(if(or (< ?choice 0) (> ?choice 2)) then
 	            	(bind ?flagChoice FALSE)
 	        	else
@@ -447,9 +609,14 @@
 )
 
 (deffunction updateHouseWithGarage()
+    "function update house with garage"
+    (printout t "=====================================================================" crlf)
+    (printout t "| No. |   House Type   | Room |  Price    |    Location    | Garage |" crlf)
+    (printout t "=====================================================================" crlf)
     (bind ?*withGarageCount* 0)
     (assert (view 1))
     (run)
+    (printout t "=====================================================================" crlf)
         
     (bind ?flagChoice FALSE)
     (bind ?idx -1)
@@ -458,7 +625,8 @@
 
         (printout t "Which house to be updated [ 1.." ?*withGarageCount* " | 0 to back to main menu ]: ") 
         (bind ?idx (read))
-                
+        
+        ; validasi index yang di-input user
         (if(eq (numberp ?idx) TRUE) then
                     
             (if (or (< ?idx 0) (> ?idx ?*withGarageCount* )) then 
@@ -468,8 +636,7 @@
             else
                 (bind ?flagChoice TRUE)
                 
-                "updateWithGarage"
-                
+                ; tanya user setiap variabel house dari index terpilih ingin diganti menjadi apa
                 (bind ?utype "")
 			    (while (and (neq ?utype "Cottage") (neq ?utype "Light House") (neq ?utype "Skyscraper"))
 			        (printout t "Input New House Type [Cottage | Light House | Skyscraper] (Case Sensitive): ")
@@ -500,6 +667,9 @@
 			        (bind ?ugarage (read))
 			    )
                 
+                ; mengkonversi idx yang di-input menjadi id house sebenarnya
+                ; hal ini diperlukan karena id house dengan idx tidak selaras / saling bertebalikan
+                ; disebabkan function view menampilkan dari facts terakhir (bottom-up)  
                 (bind ?*withGarageID* (+ ?*withGarageID* 1))
                 (bind ?idx (- ?*withGarageID* ?idx))
 			    (assert (modify ?idx 1))
@@ -514,9 +684,14 @@
 )
 
 (deffunction updateHouseNoGarage()
+    "function update house without garage"
+    (printout t "============================================================" crlf)
+    (printout t "| No. |   House Type   | Room |  Price    |    Location    |" crlf)
+	(printout t "============================================================" crlf)
     (bind ?*noGarageCount* 0)
 	(assert (view 0))
     (run)
+    (printout t "============================================================" crlf)
         
     (bind ?flagChoice FALSE)
     (bind ?idx -1)
@@ -572,16 +747,22 @@
 )
 
 (deffunction deleteHouseWithGarage()
+    "function delete house with garage"
+    (printout t "=====================================================================" crlf)
+	(printout t "| No. |   House Type   | Room |  Price    |    Location    | Garage |" crlf)
+	(printout t "=====================================================================" crlf)
     (bind ?*withGarageCount* 0)
 	(assert (view 1))
     (run)
-        
+    (printout t "=====================================================================" crlf)
+    
+    ; inisialisasi flag untuk validasi index input
     (bind ?flagChoice FALSE)
     (bind ?idx -1)
 
     (while(eq ?flagChoice FALSE)
 
-        (printout t "Which house to be deleted [ 1.. " ?*withGarageCount* " | 0 to back to main menu ]: ") 
+        (printout t "Which house to be deleted [ 1.." ?*withGarageCount* " | 0 to back to main menu ]: ") 
         (bind ?idx (read))
                 
         (if(eq (numberp ?idx) TRUE) then
@@ -589,9 +770,14 @@
             (if (and (< ?idx 0) (> ?idx ?*withGarageCount* )) then 
                 (bind ?flagChoice FALSE)
             elif (= ?idx 0) then
+                ; index 0, langsung kembali ke main menu
                 (bind ?flagChoice TRUE)
             else
                 (bind ?flagChoice TRUE)
+                
+                ; jika index benar, langsung delete indexnya
+                ; karena nomor pada view dan index berbeda, jadi idx input user harus dikonversi dulu
+                ; nextIdx diperlukan untuk rule reassign index lain setelah index input di-delete
                 (bind ?withGarageIDToken (+ ?*withGarageID* 1))
                 (bind ?delIdx (- ?withGarageIDToken ?idx))
                 (bind ?nextIdx (+ ?delIdx 1))
@@ -606,16 +792,20 @@
 )
 
 (deffunction deleteHouseNoGarage()
+    (printout t "============================================================" crlf)
+    (printout t "| No. |   House Type   | Room |  Price    |    Location    |" crlf)
+	(printout t "============================================================" crlf)
     (bind ?*noGarageCount* 0)
 	(assert (view 0))
     (run)
+    (printout t "============================================================" crlf)
         
     (bind ?flagChoice FALSE)
     (bind ?idx -1)
 
     (while(eq ?flagChoice FALSE)
 
-        (printout t "Which house to be deleted [ 1.. "?*noGarageCount* " | 0 to back to main menu ]: ") 
+        (printout t "Which house to be deleted [ 1.."?*noGarageCount* " | 0 to back to main menu ]: ") 
         (bind ?idx (read))
                 
         (if(eq (numberp ?idx) TRUE) then
@@ -640,6 +830,7 @@
 )
 
 (deffunction updateHouse()
+    "function utama update house"
     (printout t "Type of house to be updated" crlf)
     (printout t "=========================" crlf)
     (printout t "1. House with garage" crlf)
@@ -687,6 +878,7 @@
 )
 
 (deffunction deleteHouse()
+    "function utama delete house"
     (printout t "Type of house to be deleted" crlf)
     (printout t "=========================" crlf)
     (printout t "1. House with garage" crlf)
@@ -733,7 +925,7 @@
 )
 
 (deffunction searchHouse()
-    "not yet finished"
+    "function utama search house"
     (bind ?sName "")
     (bind ?sGender "")
     (bind ?sPreferences "")
@@ -742,7 +934,7 @@
     (bind ?sType "")
     (bind ?sCar -1)
     
-    "input name"
+    ; input name
     (bind ?flagChoice FALSE)
 
     (while(eq ?flagChoice FALSE)
@@ -755,21 +947,21 @@
 	    )
     )
     
-    "input gender"
+    ; input gender
     (while (and (neq ?sGender "Male")
             (neq ?sGender "Female"))
 		(printout t "Input your gender [Male | Female] (CASE-SENSITIVE): ")
         (bind ?sGender (readline))
     )
     
-    "input search preferences"
+    ; input search preferences
     (while (and (neq ?sPreferences "With Garage")
             (neq ?sPreferences "Without Garage"))
 		(printout t "Input house preferences [With Garage | Without Garage] (CASE-SENSITIVE): ")
         (bind ?sPreferences (readline))
     )
     
-    "input user income"
+    ; input user income
 	(bind ?flagChoice FALSE)
 
     (while(eq ?flagChoice FALSE)
@@ -777,10 +969,10 @@
         (printout t "Input your income [10000 - 500000] (dollars): ")
 		(bind ?sIncome (read))
         
-        ;validasi income tipe adalah angka
+        ; validasi income tipe adalah angka
         (if(eq (numberp ?sIncome) TRUE) then
             
-            ;validasi income harus 10000...500000 dollars
+            ; validasi income harus 10000...500000 dollars
         	(if(or (< ?sIncome 10000) (> ?sIncome 500000)) then
             	(bind ?flagChoice FALSE)
         	else
@@ -792,7 +984,7 @@
     	)
     )
     
-    "input search house location"
+    ; input search house location
     (bind ?sLocation "")
     
     (while (and (neq ?sLocation "West Jakarta")
@@ -802,7 +994,7 @@
         (bind ?sLocation (readline))
     )
     
-    "input search house type"
+    ; input search house type
     (while (and (neq ?sType "Cottage")
             (neq ?sType "Light House")
             (neq ?sType "Skyscraper"))
@@ -810,45 +1002,75 @@
         (bind ?sType (readline))
     )
     
-    "input car numbers"
-	(bind ?flagChoice FALSE)
-
-    (while(eq ?flagChoice FALSE)
+    ; menanyakan input jumlah mobil jika preferensi user adalah with garage
+    (if (eq ?sPreferences "With Garage") then
+	; input car numbers
+		(bind ?flagChoice FALSE)
+	
+	    (while(eq ?flagChoice FALSE)
+	        
+	        (printout t "Input number of car you own [1 - 5]: ")
+			(bind ?sCar (read))
+	        
+	        ; validasi car numbers adalah angka
+	        (if(eq (numberp ?sCar) TRUE) then
+	            
+	            ; validasi car numbers harus 1...5
+	        	(if(or (< ?sCar 1) (> ?sCar 5)) then
+	            	(bind ?flagChoice FALSE)
+	        	else
+	        		(bind ?flagChoice TRUE)
+	        	)
+	            
+	        else
+	        	(bind ?flagChoice FALSE)
+	    	)
+	    )
         
-        (printout t "Input number of car you own [1 - 5]: ")
-		(bind ?sCar (read))
+        ; insert data with garage yang ada
+        ; mereset countValidity jadi 0 kembali
+	    (bind ?*countValidity* 0)
+	    
+	    ; masukkan ke dalam template user info with garage
+	    (assert (userSearchInfoWithGarage (name ?sName)(gender ?sGender)(preference ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)(garage ?sCar)))
+	    
+        ; masukkan preferensi ke dalam userPreference
+        (assert (userPreference (preference ?sPreferences)))
         
-        "validasi car numbers tipe adalah angka"
-        (if(eq (numberp ?sCar) TRUE) then
+	    ; masukkan ke dalam defrule search house sesuai dengan preferensi with garage
+	    (assert (search ?sPreferences ?sIncome ?sLocation ?sType ?sCar))
+    	(run)
+        
+        else (
+            ; insert data without garage yang ada
+            ; mereset countValidity jadi 0 kembali
+		    (bind ?*countValidity* 0)
+		    
+		    ; masukkan ke dalam template user info without garage
+		    (assert (userSearchInfoNoGarage (name ?sName)(gender ?sGender)(preference ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)))
+		    
+            ; masukkan preferensi ke dalam userPreference
+        	(assert (userPreference (preference ?sPreferences)))
             
-            "validasi car numbers harus 1...5"
-        	(if(or (< ?sCar 1) (> ?sCar 5)) then
-            	(bind ?flagChoice FALSE)
-        	else
-        		(bind ?flagChoice TRUE)
-        	)
-            
-        else
-        	(bind ?flagChoice FALSE)
-    	)
+		    ; masukkan ke dalam defrule search house sesuai dengan preferensi without garage
+		    (assert (search ?sPreferences ?sIncome ?sLocation ?sType))
+    		(run)
+        )
     )
-    
-    (assert (search ?sPreferences ?sIncome ?sLocation ?sType))
-    (run)
 )
 
 (deffacts house
-    "intentionally shuffled"
-	(houseNoGarage (id 1)(type "Cottage") (room 3) (price 7500) (location "South Jakarta"))
-	(houseNoGarage (id 2)(type "Light House") (room 3) (price 25000) (location "South Jakarta"))
+    "initial data"
     (houseWithGarage (id 1)(type "Cottage") (room 3) (price 4500) (location "North Jakarta") (garage 1)) 
 	(houseWithGarage (id 2)(type "Skyscraper") (room 5) (price 175000) (location "South Jakarta") (garage 3))
+    (houseWithGarage (id 3)(type "Cottage") (room 3) (price 30000) (location "West Jakarta") (garage 2)) 
+	(houseWithGarage (id 4)(type "Light House") (room 2) (price 7500) (location "South Jakarta") (garage 2)) 
+	(houseWithGarage (id 5)(type "Light House") (room 4) (price 7500) (location "West Jakarta") (garage 1)) 
+    (houseNoGarage (id 1)(type "Cottage") (room 3) (price 7500) (location "South Jakarta"))
+	(houseNoGarage (id 2)(type "Light House") (room 3) (price 25000) (location "South Jakarta"))
 	(houseNoGarage (id 3)(type "Skyscraper") (room 4) (price 100000) (location "West Jakarta")) 
 	(houseNoGarage (id 4)(type "Cottage") (room 2) (price 5000) (location "North Jakarta")) 
-	(houseWithGarage (id 3)(type "Cottage") (room 3) (price 30000) (location "West Jakarta") (garage 2)) 
-    (houseNoGarage (id 5)(type "Light House") (room 3) (price 10000) (location "West Jakarta"))  
-	(houseWithGarage (id 4)(type "Light House") (room 2) (price 7500) (location "South Jakarta") (garage 2)) 
-	(houseWithGarage (id 5)(type "Light House") (room 4) (price 7500) (location "West Jakarta") (garage 1))    
+    (houseNoGarage (id 5)(type "Light House") (room 3) (price 10000) (location "West Jakarta")) 
 )
 
 (reset)
@@ -858,9 +1080,8 @@
 
 (while (neq ?choice 6)
     (menu)
-    (facts)
 
-    ;inisialisasi flag validasi choice
+    ; inisialisasi flag validasi choice
     (bind ?flagChoice FALSE)
     
     (while(eq ?flagChoice FALSE)
@@ -868,16 +1089,15 @@
         (printout t ">> Input [1-6]: ")
 		(bind ?choice (read))
         
-        ;validasi choice tipe adalah angka
+        ; validasi choice tipe adalah angka
         (if(eq (numberp ?choice) TRUE) then
             
-            ;validasi choice harus 1...6
+            ; validasi choice harus 1...6
         	(if(or (< ?choice 1) (> ?choice 6)) then
             	(bind ?flagChoice FALSE)
         	else
         		(bind ?flagChoice TRUE)
         	)
-            
         else
         	(bind ?flagChoice FALSE)
     	)
