@@ -1,3 +1,6 @@
+; 2101690042 ALBERTUS HERONIUS
+; 2101626651 MICHAEL JONG
+
 (defglobal 
     ?*withGarageCount* = 0
     ?*noGarageCount* = 0
@@ -185,9 +188,24 @@
 )
 
 (defrule retractSearch
-	?search <- (search ?sPreferences ?sIncome ?sLocation ?sType)
+	?search <- (search ?sPreferences ?sIncome ?sLocation ?sType ?sCar)
     =>
     (retract ?search)    
+)
+
+(defrule retractDeleteSearchResult
+    "rule untuk mendelete rule retractSearch"
+    ?retractResult <- (retractResult 1)
+    =>
+    (retract ?retractResult)
+)
+
+(defrule DeleteSearchResult
+	"rule untuk mendelete hasil search agar tidak menganggu hasil search selanjutnya"
+    (retractResult 1)
+    ?search-result <- (houseValidSearch (type ?type) (roomNumber ?roomNumber) (price ?price) (location ?location) (number ?number) (match-rate ?match-rate))
+    =>
+    (retract ?search-result)
 )
 
 (defrule searchWithGarage
@@ -234,7 +252,7 @@
 )
 
 (defrule searchNoGarage
-    "rule to search house with garage"
+    "rule to search house without garage"
 	?search <- (search "Without Garage" ?sIncome ?sLocation ?sType ?sCar)
     ?data-fact <- (houseNoGarage (price ?price) (location ?location) (type ?type) (room ?roomNumber))
     =>
@@ -884,7 +902,7 @@
     (bind ?sIncome -1)
     (bind ?sLocation "")
     (bind ?sType "")
-    (bind ?sCar -1)
+    (bind ?sCar 0)
     
     ; input name
     (bind ?flagChoice FALSE)
@@ -978,31 +996,16 @@
 	        	(bind ?flagChoice FALSE)
 	    	)
 	    )
-        
-        ; insert data with garage yang ada
-        ; mereset countValidity jadi 0 kembali
-	    (bind ?*countValidity* 0)
-	    
-	    ; masukkan ke dalam template user info with garage
-	    (assert (userSearchInfo(name ?sName)(gender ?sGender)(interest ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)(carCount ?sCar)))
-        
-	    ; masukkan ke dalam defrule search house sesuai dengan preferensi (interest) with garage
-	    (assert (search ?sPreferences ?sIncome ?sLocation ?sType ?sCar))
-    	(run)
-        
-        else (
-            ; insert data without garage yang ada
-            ; mereset countValidity jadi 0 kembali
-		    (bind ?*countValidity* 0)
-		    
-		    ; masukkan ke dalam template user info without garage (artinya car = 0)
-		    (assert (userSearchInfo (name ?sName)(gender ?sGender)(interest ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)(carCount 0)))
-            
-		    ; masukkan ke dalam defrule search house sesuai dengan preferensi (interest) without garage
-		    (assert (search ?sPreferences ?sIncome ?sLocation ?sType))
-    		(run)
-        )
     )
+
+    ; insert data yang telah diinput
+    
+    ; masukkan ke dalam template user info
+    (assert (userSearchInfo(name ?sName)(gender ?sGender)(interest ?sPreferences)(income ?sIncome)(location ?sLocation)(type ?sType)(carCount ?sCar)))
+    
+    ; masukkan ke dalam defrule search house
+    (assert (search ?sPreferences ?sIncome ?sLocation ?sType ?sCar))
+	(run)
 )
 
 (deffacts house
@@ -1064,6 +1067,9 @@
         elif (eq ?choice 5) then
         	(searchHouse)
         	(new Template)
+        	(facts)
+        	(assert (retractResult 1))
+        	(run)
     )
     
     (clearScreen)
